@@ -1,0 +1,12 @@
+# No external dependencies required
+# This script uses only Python built-in libraries:
+# - os
+# - re  
+# - csv
+# - glob
+# - datetime
+# - typing
+
+# If you want to add data analysis capabilities, you can uncomment these:
+# pandas>=1.5.0
+# numpy>=1.21.0
