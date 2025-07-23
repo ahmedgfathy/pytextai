@@ -511,3 +511,77 @@ def test_status_keywords():
 *Last Updated: July 2025*
 *Version: 1.0.0*
 *Maintainer: AI Development Team*
+
+## 🏠 AI-Powered Property Type Classification
+
+### Overview
+The `extract_property_type()` function implements intelligent property classification using comprehensive keyword analysis and contextual AI processing. It automatically categorizes real estate properties into four main types.
+
+### Classification Categories
+
+#### 1. **Apartment** (شقة)
+- **Arabic Keywords**: شقة, شقه, الشقة, الشقه, دوبلكس, دوبليكس, بنتهاوس, استوديو, وحدة, وحده
+- **English Keywords**: apartment, flat, unit, duplex, penthouse, studio, condo, condominium
+- **Context Clues**: Mentions of rooms, floors, building amenities
+
+#### 2. **Villa** (فيلا)
+- **Arabic Keywords**: فيلا, فيله, الفيلا, الفيله, قصر, القصر, بيت, البيت, منزل, المنزل, دار, توين هاوس, تاون هاوس
+- **English Keywords**: villa, house, mansion, palace, home, residence, townhouse, twin house, standalone
+- **Context Clues**: Garden, private entrance, multiple floors
+
+#### 3. **Land** (قطعة أرض)
+- **Arabic Keywords**: قطعة, قطعه, ارض, أرض, الارض, الأرض, قطعة ارض, قطعة أرض, مزرعة, المزرعة, فدان
+- **English Keywords**: land, plot, lot, piece, farm, acre, ground, site, parcel
+- **Context Clues**: Area measurements, construction licenses, building permits
+
+#### 4. **Commercial** (تجاري)
+- **Arabic Keywords**: محل, المحل, مكتب, المكتب, عيادة, العيادة, مطعم, المطعم, مقهى, صيدلية, عمارة
+- **English Keywords**: shop, store, office, clinic, restaurant, cafe, pharmacy, building, commercial
+- **Context Clues**: Business activities, commercial licensing
+
+### AI Processing Logic
+
+#### Multi-Language Detection
+```python
+# Priority-based matching system:
+1. Direct keyword matching (Arabic & English)
+2. Contextual analysis for ambiguous cases
+3. Priority ranking: Villa > Apartment > Commercial > Land
+```
+
+#### Context-Aware Classification
+- **Room Detection**: If amenities mentioned → apartment
+- **Construction Terms**: If building permits mentioned → land
+- **Business Terms**: If commercial activities mentioned → commercial
+- **Size References**: Large areas without building type → land
+
+#### Performance Metrics
+- **Classification Rate**: 80.8% of all messages
+- **Distribution Analysis**:
+  - Land: 22,662 messages (48.8%)
+  - Apartment: 11,319 messages (24.4%)
+  - Villa: 10,330 messages (22.2%)
+  - Commercial: 2,153 messages (4.6%)
+
+### Implementation Features
+
+#### Intelligent Priority System
+The classifier uses a priority ranking system to handle messages containing multiple property types:
+1. **Villa** (most specific residential)
+2. **Apartment** (specific residential)
+3. **Commercial** (specific non-residential)
+4. **Land** (general/undeveloped)
+
+#### Contextual Fallback Logic
+```python
+# When no direct keywords found:
+if rooms/amenities_mentioned:
+    return 'apartment'
+elif area/construction_mentioned:
+    return 'land'
+```
+
+#### Quality Assurance
+- **False Positive Reduction**: Avoids misclassifying general terms
+- **Bilingual Coverage**: Handles Arabic-English mixed content
+- **Cultural Adaptation**: Egyptian real estate terminology optimized
