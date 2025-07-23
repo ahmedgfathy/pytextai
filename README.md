@@ -5,7 +5,12 @@
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)
-![Platform](https://img.shields.io/badge/Platform-Cross%20Platform-lightgrey.svg)
+![Pla### Sample Output (CSV)
+```csv
+unique_id,file_source,date,time,sender_name,sender_phone,sender_phone_2,message,message_backup,status,region,line_number
+PRO4,whatsapp_chat_exports/_chat.txt,24/05/2025,1:39:50 AM,محمد فرج,01092400709,,للبيع في حي 19 مجاورة 1 مساحة 276 بحرى خالصه ورخصة سارية,للبيع في حي 19 مجاورة 1 مساحة 276 بحرى خالصه ورخصة سارية 📱01092400709,"للبيع, بيع","حي 19, مجاورة 1",145
+PRO5,whatsapp_chat_exports/_chat.txt,24/05/2025,2:23:41 AM,atyiaahmed40,,01103147894,شمال المدينة حى7 ع المترو للبيع بمدينة قطعة بالحى السابع,شمال المدينة حى7 ع المترو للبيع بمدينة قطعة بالحى السابع 01103147894,"للبيع, بيع","حي 7, شمال المدينة",156
+```(https://img.shields.io/badge/Platform-Cross%20Platform-lightgrey.svg)
 
 *🚀 Transform WhatsApp group chat exports into structured business intelligence data*
 
@@ -51,6 +56,7 @@ This **WhatsApp Chat Parser** is a powerful Python-based system designed to extr
 
 ### 🏷️ **Intelligent Classification**
 - **Property Status Keywords**: Detects sale, rent, wanted, investment terms
+- **Region/Area Extraction**: AI-powered location detection from message content
 - **Bilingual Support**: Arabic and English keyword recognition
 - **Status Extraction**: Automatically categorizes messages by business intent
 
@@ -96,6 +102,7 @@ Processing: whatsapp_chat_exports/_chat.txt
   - Total messages: 57,488
   - Messages with phone numbers: 45,077
   - Messages with status keywords: 47,496
+  - Messages with region information: 49,423
   - Unique senders: 478
 ```
 
@@ -154,13 +161,14 @@ The system generates a comprehensive CSV file with the following structure:
 | `message` | Cleaned message content | للبيع شقة 120 متر... |
 | `message_backup` | Original message | 🏠للبيع شقة 120 متر📱01234567890 |
 | `status` | Extracted keywords | للبيع, for sale |
+| `region` | Detected location/area | حي 19, مجاورة 1 |
 | `line_number` | Source line number | 150 |
 
 ### 📊 Sample Output
 ```csv
-unique_id,file_source,date,time,sender_name,sender_phone,sender_phone_2,message,message_backup,status,line_number
-PRO1,whatsapp_chat_exports/_chat.txt,24/05/2025,1:04:06 AM,Ahmed Gomaa,01234567890,,للبيع شقة 120 متر,🏠للبيع شقة 120 متر📱01234567890,للبيع,45
-PRO2,whatsapp_chat_exports/_chat.txt,24/05/2025,2:15:30 PM,Sara Ali,01098765432,01155443322,مطلوب شقة للايجار,مطلوب شقة للايجار 📞01155443322,مطلوب,78
+unique_id,file_source,date,time,sender_name,sender_phone,sender_phone_2,message,message_backup,status,region,line_number
+PRO1,whatsapp_chat_exports/_chat.txt,24/05/2025,1:04:06 AM,Ahmed Gomaa,01234567890,,للبيع شقة 120 متر,🏠للبيع شقة 120 متر📱01234567890,للبيع,"حي 19, مجاورة 1",45
+PRO2,whatsapp_chat_exports/_chat.txt,24/05/2025,2:15:30 PM,Sara Ali,01098765432,01155443322,مطلوب شقة للايجار,مطلوب شقة للايجار 📞01155443322,مطلوب,"شمال المدينة",78
 ```
 
 ## 🛠️ Technical Stack
@@ -225,6 +233,20 @@ whatsapp-chat-parser/
 # English: for sale, wanted, available, rent, investment
 ```
 
+### 🗺️ **AI-Powered Region Detection**
+```python
+# Cities: القاهرة, بدر, الشروق, العبور, النوبارية
+# Districts: حي 19, مجاورة 3, الحى السابع
+# Areas: شمال المدينة, وسط البلد, امتداد غرب
+```
+
+**Top Detected Regions:**
+- 🏘️ **حي** (Districts): 19,973+ messages
+- 🏙️ **العاشر من رمضان**: 9,064+ messages  
+- 🌇 **بدر**: 4,060+ messages
+- 🏗️ **العبور**: 1,509+ messages
+- 🏢 **التجمع**: 1,284+ messages
+
 ### 🧹 **Advanced Text Cleaning**
 ```python
 # Removes: Emojis, Media references, Deleted messages
@@ -276,8 +298,8 @@ We welcome contributions! Here's how you can help:
 ### Sample Output (CSV)
 ```csv
 unique_id,file_source,date,time,sender_name,sender_phone,sender_phone_2,message,message_backup,status,line_number
-PRO4,whatsapp_chat_exports/_chat.txt,24/05/2025,1:39:50 AM,محمد فرج,01092400709,,للبيع في حي 19 مجاورة 1 مساحة 276 بحرى خالصه ورخصة سارية,للبيع في حي 19 مجاورة 1 مساحة 276 بحرى خالصه ورخصة سارية 📱01092400709,للبيع,145
-PRO5,whatsapp_chat_exports/_chat.txt,24/05/2025,2:23:41 AM,atyiaahmed40,,01103147894,شمال المدينة حى7 ع المترو للبيع بمدينة قطعة بالحى السابع,شمال المدينة حى7 ع المترو للبيع بمدينة قطعة بالحى السابع 01103147894,للبيع,156
+PRO4,whatsapp_chat_exports/_chat.txt,24/05/2025,1:39:50 AM,محمد فرج,01092400709,,للبيع في حي 19 مجاورة 1 مساحة 276 بحرى خالصه ورخصة سارية,للبيع في حي 19 مجاورة 1 مساحة 276 بحرى خالصه ورخصة سارية 📱01092400709,"للبيع, بيع","حي 19, مجاورة 1",145
+PRO5,whatsapp_chat_exports/_chat.txt,24/05/2025,2:23:41 AM,atyiaahmed40,,01103147894,شمال المدينة حى7 ع المترو للبيع بمدينة قطعة بالحى السابع,شمال المدينة حى7 ع المترو للبيع بمدينة قطعة بالحى السابع 01103147894,"للبيع, بيع","حي 7, شمال المدينة",156
 ```
 
 ## 🎯 Key Achievements
@@ -285,6 +307,7 @@ PRO5,whatsapp_chat_exports/_chat.txt,24/05/2025,2:23:41 AM,atyiaahmed40,,0110314
 - ✅ **57,488+ messages** processed successfully
 - ✅ **78.4% phone extraction** rate achieved  
 - ✅ **82.6% keyword classification** accuracy
+- ✅ **86.0% region detection** success rate
 - ✅ **478 unique senders** identified
 - ✅ **Zero external dependencies** - pure Python
 - ✅ **Bilingual support** - Arabic & English

@@ -98,7 +98,8 @@ def parse_message(line):
             'sender_phone_2': '',
             'message': message,
             'message_backup': message,
-            'status': ''
+            'status': '',
+            'region': ''
         }
     return None
 
@@ -137,6 +138,131 @@ def extract_status_keywords(text):
     
     # Return unique keywords joined by comma
     return ', '.join(list(dict.fromkeys(found_keywords)))  # Remove duplicates while preserving order
+
+def extract_region_names(text):
+    """Extract region/area names from message text using AI language processing"""
+    
+    # Egyptian cities and major areas
+    egyptian_cities = [
+        # Major cities
+        'القاهرة', 'cairo', 'الجيزة', 'giza', 'الإسكندرية', 'alexandria', 'أسوان', 'aswan',
+        'الأقصر', 'luxor', 'المنصورة', 'mansoura', 'طنطا', 'tanta', 'الزقازيق', 'zagazig',
+        'بورسعيد', 'port said', 'السويس', 'suez', 'الإسماعيلية', 'ismailia',
+        
+        # New Administrative Capital and new cities
+        'العاصمة الإدارية', 'العاصمة الجديدة', 'العاصمة الادارية', 'administrative capital', 'new capital',
+        'العبور', 'el obour', 'obour', 'مدينة العبور', 'العبور الجديدة', 'new obour',
+        'بدر', 'badr', 'مدينة بدر', 'badr city', 'مدينة المستقبل', 'city of the future',
+        'الشروق', 'el shorouk', 'shorouk', 'مدينة الشروق', 'shorouk city',
+        'الرحاب', 'rehab', 'مدينة الرحاب', 'rehab city', 'التجمع', 'new cairo', 'التجمع الخامس',
+        'مدينة نصر', 'nasr city', 'المقطم', 'mokattam', 'المعادي', 'maadi',
+        
+        # 10th of Ramadan and surrounding areas
+        'العاشر من رمضان', '10th of ramadan', 'th10 of ramadan', 'العاشر', 'ramadan city',
+        '15 مايو', '15 may', 'مدينة 15 مايو', '6 أكتوبر', '6th october', 'october city',
+        
+        # Specific areas in new cities
+        'النوبارية', 'el nobariya', 'nobariya', 'وادي النطرون', 'wadi el natrun',
+        'برج العرب', 'borg el arab', 'العلمين', 'el alamein', 'alamein',
+        
+        # Districts and neighborhoods (حي)
+        'حي', 'حى', 'district', 'الحي', 'الحى'
+    ]
+    
+    # Neighborhood/district patterns (مجاورة)
+    neighborhood_patterns = [
+        'مجاورة', 'مجاوره', 'neighborhood', 'المجاورة', 'المجاوره'
+    ]
+    
+    # Compass directions and locations
+    directions = [
+        'شمال', 'north', 'جنوب', 'south', 'شرق', 'east', 'غرب', 'west',
+        'شمالي', 'شمالى', 'جنوبي', 'جنوبى', 'شرقي', 'شرقى', 'غربي', 'غربى',
+        'وسط', 'center', 'central', 'downtown'
+    ]
+    
+    # Area-specific terms
+    area_terms = [
+        'منطقة', 'area', 'المنطقة', 'نطاق', 'إقليم', 'region', 'المدينة', 'city',
+        'القرية', 'village', 'البلد', 'town', 'الضاحية', 'suburb', 'امتداد', 'extension'
+    ]
+    
+    found_regions = []
+    text_lower = text.lower()
+    
+    # Extract Egyptian cities and areas
+    for city in egyptian_cities:
+        if city.lower() in text_lower:
+            found_regions.append(city)
+    
+    # Extract neighborhood patterns with numbers (e.g., "حي 19", "مجاورة 3")
+    neighborhood_patterns_regex = [
+        r'(?:حي|حى|الحي|الحى)\s*(\d+)',  # حي 19, الحي 22
+        r'(?:مجاورة|مجاوره|المجاورة|المجاوره)\s*(\d+)',  # مجاورة 3, المجاورة 81
+        r'(?:district|neighborhood)\s*(\d+)',  # district 15
+        r'(?:المرحله|المرحلة)\s*\(?\s*(\d+)\s*\)?',  # المرحله (10)
+    ]
+    
+    for pattern in neighborhood_patterns_regex:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for match in matches:
+            if 'حي' in pattern or 'حى' in pattern:
+                found_regions.append(f"حي {match}")
+            elif 'مجاور' in pattern:
+                found_regions.append(f"مجاورة {match}")
+            elif 'district' in pattern:
+                found_regions.append(f"District {match}")
+            elif 'المرحل' in pattern:
+                found_regions.append(f"المرحلة {match}")
+    
+    # Extract areas with directions (e.g., "شمال المدينة", "غرب جولف")
+    direction_patterns = [
+        r'(شمال|جنوب|شرق|غرب|وسط)\s+([^\s،,]{3,15})',  # شمال المدينة
+        r'(north|south|east|west|central)\s+([^\s،,]{3,15})',  # north cairo
+        r'امتداد\s+([^\s،,]{3,15})',  # امتداد غرب
+    ]
+    
+    for pattern in direction_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for match in matches:
+            if isinstance(match, tuple):
+                if len(match) == 2:
+                    found_regions.append(f"{match[0]} {match[1]}")
+                else:
+                    found_regions.append(' '.join(match))
+            else:
+                found_regions.append(f"امتداد {match}")
+    
+    # Extract specific location names (potential areas/landmarks)
+    # Look for patterns like "في X" where X could be a location
+    location_patterns = [
+        r'(?:في|ف|بـ|ب)\s+([أ-ي\w]{3,20})',  # في بدر, ف الشروق
+        r'(?:in|at)\s+([a-zA-Z]{3,20})',  # in Badr, at Shorouk
+    ]
+    
+    for pattern in location_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for match in matches:
+            # Filter out common words that aren't locations
+            if match.lower() not in ['الحي', 'حي', 'مجاورة', 'مجاوره', 'المجاورة', 'المجاوره', 
+                                   'البيت', 'الشقة', 'العقار', 'المنزل', 'الفيلا', 'house', 'apartment',
+                                   'property', 'villa', 'building', 'floor', 'room', 'meter', 'متر',
+                                   'ادوار', 'دور', 'غرفة', 'صالة', 'مطبخ', 'حمام']:
+                if len(match) >= 3:  # Only include meaningful location names
+                    found_regions.append(match)
+    
+    # Clean and deduplicate regions
+    cleaned_regions = []
+    for region in found_regions:
+        region = region.strip()
+        if region and len(region) >= 2:
+            cleaned_regions.append(region)
+    
+    # Remove duplicates while preserving order
+    unique_regions = list(dict.fromkeys(cleaned_regions))
+    
+    # Limit to most relevant regions (max 3 to avoid noise)
+    return ', '.join(unique_regions[:3]) if unique_regions else ''
 
 def main():
     print("🔍 WhatsApp Chat Parser - Simple Version")
@@ -275,6 +401,9 @@ def main():
             # Extract status keywords from message_backup (original message)
             msg['status'] = extract_status_keywords(msg['message_backup'])
             
+            # Extract region names from message_backup (original message)
+            msg['region'] = extract_region_names(msg['message_backup'])
+            
             # Also clean sender_name from emojis
             msg['sender_name'] = remove_emojis(msg['sender_name'])
             
@@ -283,7 +412,7 @@ def main():
             msg['sender_name'] = re.sub(r'\s+', ' ', msg['sender_name']).strip()
         
         # Save to CSV
-        headers = ['unique_id', 'file_source', 'date', 'time', 'sender_name', 'sender_phone', 'sender_phone_2', 'message', 'message_backup', 'status', 'line_number']
+        headers = ['unique_id', 'file_source', 'date', 'time', 'sender_name', 'sender_phone', 'sender_phone_2', 'message', 'message_backup', 'status', 'region', 'line_number']
         with open('whatsapp_chats.csv', 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=headers)
             writer.writeheader()
@@ -294,11 +423,13 @@ def main():
         phone_count = sum(1 for msg in all_messages if msg['sender_phone'])
         phone2_count = sum(1 for msg in all_messages if msg['sender_phone_2'])
         status_count = sum(1 for msg in all_messages if msg['status'])
+        region_count = sum(1 for msg in all_messages if msg['region'])
         print(f"📊 Statistics:")
         print(f"  - Total messages: {len(all_messages)}")
         print(f"  - Messages with phone numbers: {phone_count}")
         print(f"  - Messages with second phone numbers: {phone2_count}")
         print(f"  - Messages with status keywords: {status_count}")
+        print(f"  - Messages with region information: {region_count}")
         print(f"  - Unique senders: {len(set(msg['sender_name'] for msg in all_messages))}")
         
         # Show sample
@@ -306,7 +437,8 @@ def main():
         for i, msg in enumerate(all_messages[:5]):
             phone_display = f" ({msg['sender_phone']})" if msg['sender_phone'] else ""
             phone2_display = f" + {msg['sender_phone_2']}" if msg['sender_phone_2'] else ""
-            print(f"{i+1}. {msg['unique_id']} - [{msg['date']} {msg['time']}] {msg['sender_name']}{phone_display}{phone2_display}: {msg['message'][:50]}...")
+            region_display = f" [📍{msg['region']}]" if msg['region'] else ""
+            print(f"{i+1}. {msg['unique_id']} - [{msg['date']} {msg['time']}] {msg['sender_name']}{phone_display}{phone2_display}{region_display}: {msg['message'][:50]}...")
     else:
         print("❌ No messages found")
 
