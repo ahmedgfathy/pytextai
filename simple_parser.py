@@ -99,7 +99,8 @@ def parse_message(line):
             'message': message,
             'message_backup': message,
             'status': '',
-            'region': ''
+            'region': '',
+            'property_type': ''
         }
     return None
 
@@ -264,6 +265,67 @@ def extract_region_names(text):
     # Limit to most relevant regions (max 3 to avoid noise)
     return ', '.join(unique_regions[:3]) if unique_regions else ''
 
+def extract_property_type(text):
+    """Extract property type from message text using AI language processing"""
+    
+    # Define property type keywords in Arabic and English
+    property_types = {
+        'apartment': {
+            'arabic': ['شقة', 'شقه', 'الشقة', 'الشقه', 'دوبلكس', 'دوبليكس', 'بنتهاوس', 'استوديو', 'وحدة', 'وحده', 'الوحدة', 'الوحده'],
+            'english': ['apartment', 'flat', 'unit', 'duplex', 'penthouse', 'studio', 'condo', 'condominium']
+        },
+        'villa': {
+            'arabic': ['فيلا', 'فيله', 'الفيلا', 'الفيله', 'قصر', 'القصر', 'بيت', 'البيت', 'منزل', 'المنزل', 'دار', 'الدار', 'توين هاوس', 'تاون هاوس'],
+            'english': ['villa', 'house', 'mansion', 'palace', 'home', 'residence', 'townhouse', 'twin house', 'standalone']
+        },
+        'land': {
+            'arabic': ['قطعة', 'قطعه', 'ارض', 'أرض', 'الارض', 'الأرض', 'قطعة ارض', 'قطعة أرض', 'قطعه ارض', 'قطعه أرض', 'مزرعة', 'المزرعة', 'فدان'],
+            'english': ['land', 'plot', 'lot', 'piece', 'farm', 'acre', 'ground', 'site', 'parcel']
+        },
+        'commercial': {
+            'arabic': ['محل', 'المحل', 'مكتب', 'المكتب', 'عيادة', 'العيادة', 'مطعم', 'المطعم', 'مقهى', 'المقهى', 'صيدلية', 'الصيدلية', 'عمارة', 'العمارة'],
+            'english': ['shop', 'store', 'office', 'clinic', 'restaurant', 'cafe', 'pharmacy', 'building', 'commercial']
+        }
+    }
+    
+    text_lower = text.lower()
+    detected_types = []
+    
+    # Check for each property type
+    for prop_type, keywords in property_types.items():
+        # Check Arabic keywords
+        for keyword in keywords['arabic']:
+            if keyword in text:
+                detected_types.append(prop_type)
+                break
+        
+        # Check English keywords if not already detected
+        if prop_type not in detected_types:
+            for keyword in keywords['english']:
+                if keyword in text_lower:
+                    detected_types.append(prop_type)
+                    break
+    
+    # Context-based classification for ambiguous cases
+    if not detected_types:
+        # Look for contextual clues
+        if any(word in text for word in ['غرف', 'غرفة', 'حمام', 'مطبخ', 'ريسبشن', 'صالة', 'rooms', 'bedroom', 'bathroom', 'kitchen']):
+            # If rooms/amenities mentioned but no clear type, likely apartment
+            detected_types.append('apartment')
+        elif any(word in text for word in ['متر', 'مساحة', 'بناء', 'رخصة', 'حفر', 'meter', 'area', 'construction', 'license']):
+            # If area/construction mentioned without clear building type, likely land
+            detected_types.append('land')
+    
+    # Priority ranking: More specific types first
+    priority_order = ['villa', 'apartment', 'commercial', 'land']
+    
+    for prop_type in priority_order:
+        if prop_type in detected_types:
+            return prop_type
+    
+    # Return empty if no type detected
+    return ''
+
 def main():
     print("🔍 WhatsApp Chat Parser - Simple Version")
     print("=" * 50)
@@ -404,6 +466,12 @@ def main():
             # Extract region names from message_backup (original message)
             msg['region'] = extract_region_names(msg['message_backup'])
             
+            # Extract property type from message_backup (original message)
+            msg['property_type'] = extract_property_type(msg['message_backup'])
+            
+            # Extract property type from message_backup (original message)
+            msg['property_type'] = extract_property_type(msg['message_backup'])
+            
             # Also clean sender_name from emojis
             msg['sender_name'] = remove_emojis(msg['sender_name'])
             
@@ -412,7 +480,7 @@ def main():
             msg['sender_name'] = re.sub(r'\s+', ' ', msg['sender_name']).strip()
         
         # Save to CSV
-        headers = ['unique_id', 'file_source', 'date', 'time', 'sender_name', 'sender_phone', 'sender_phone_2', 'message', 'message_backup', 'status', 'region', 'line_number']
+        headers = ['unique_id', 'file_source', 'date', 'time', 'sender_name', 'sender_phone', 'sender_phone_2', 'message', 'message_backup', 'status', 'region', 'property_type', 'line_number']
         with open('whatsapp_chats.csv', 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=headers)
             writer.writeheader()
@@ -424,12 +492,14 @@ def main():
         phone2_count = sum(1 for msg in all_messages if msg['sender_phone_2'])
         status_count = sum(1 for msg in all_messages if msg['status'])
         region_count = sum(1 for msg in all_messages if msg['region'])
+        property_type_count = sum(1 for msg in all_messages if msg['property_type'])
         print(f"📊 Statistics:")
         print(f"  - Total messages: {len(all_messages)}")
         print(f"  - Messages with phone numbers: {phone_count}")
         print(f"  - Messages with second phone numbers: {phone2_count}")
         print(f"  - Messages with status keywords: {status_count}")
         print(f"  - Messages with region information: {region_count}")
+        print(f"  - Messages with property type information: {property_type_count}")
         print(f"  - Unique senders: {len(set(msg['sender_name'] for msg in all_messages))}")
         
         # Show sample
@@ -438,7 +508,8 @@ def main():
             phone_display = f" ({msg['sender_phone']})" if msg['sender_phone'] else ""
             phone2_display = f" + {msg['sender_phone_2']}" if msg['sender_phone_2'] else ""
             region_display = f" [📍{msg['region']}]" if msg['region'] else ""
-            print(f"{i+1}. {msg['unique_id']} - [{msg['date']} {msg['time']}] {msg['sender_name']}{phone_display}{phone2_display}{region_display}: {msg['message'][:50]}...")
+            property_type_display = f" [🏡{msg['property_type']}]" if msg['property_type'] else ""
+            print(f"{i+1}. {msg['unique_id']} - [{msg['date']} {msg['time']}] {msg['sender_name']}{phone_display}{phone2_display}{region_display}{property_type_display}: {msg['message'][:50]}...")
     else:
         print("❌ No messages found")
 
