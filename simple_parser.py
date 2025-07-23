@@ -319,9 +319,17 @@ def extract_property_type(text):
     # Priority ranking: More specific types first
     priority_order = ['villa', 'apartment', 'commercial', 'land']
     
+    # Map English to Arabic property types
+    arabic_types = {
+        'villa': 'فيلا',
+        'apartment': 'شقة',
+        'commercial': 'تجاري', 
+        'land': 'قطعة أرض'
+    }
+    
     for prop_type in priority_order:
         if prop_type in detected_types:
-            return prop_type
+            return arabic_types[prop_type]
     
     # Return empty if no type detected
     return ''
