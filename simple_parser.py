@@ -91,20 +91,47 @@ def main():
     print(f"\nTotal messages: {len(all_messages)}")
     
     if all_messages:
-        # Save to CSV
-        headers = ['file_source', 'date', 'time', 'sender_name', 'sender_phone', 'message', 'line_number']
+        # Add unique ID and extract mobile numbers from messages
+        mobile_pattern = r'(01[0125]\d{8})'
         
+        for i, msg in enumerate(all_messages, 1):
+            # Add unique ID
+            msg['unique_id'] = f"PRO{i}"
+            
+            # Extract mobile numbers from message content
+            found_numbers = re.findall(mobile_pattern, msg['message'])
+            if found_numbers:
+                # If sender_phone is empty, set to first found number
+                if not msg['sender_phone']:
+                    msg['sender_phone'] = found_numbers[0]
+                
+                # Remove all found numbers from message
+                for num in found_numbers:
+                    msg['message'] = re.sub(re.escape(num), '', msg['message'])
+                
+                # Clean up extra spaces and punctuation
+                msg['message'] = re.sub(r'[.\s]+', ' ', msg['message']).strip()
+        
+        # Save to CSV
+        headers = ['unique_id', 'file_source', 'date', 'time', 'sender_name', 'sender_phone', 'message', 'line_number']
         with open('whatsapp_chats.csv', 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=headers)
             writer.writeheader()
             writer.writerows(all_messages)
-        
         print(f"✅ CSV saved: whatsapp_chats.csv")
+        
+        # Show statistics
+        phone_count = sum(1 for msg in all_messages if msg['sender_phone'])
+        print(f"📊 Statistics:")
+        print(f"  - Total messages: {len(all_messages)}")
+        print(f"  - Messages with phone numbers: {phone_count}")
+        print(f"  - Unique senders: {len(set(msg['sender_name'] for msg in all_messages))}")
         
         # Show sample
         print("\n📋 Sample messages:")
         for i, msg in enumerate(all_messages[:3]):
-            print(f"{i+1}. [{msg['date']} {msg['time']}] {msg['sender_name']}: {msg['message'][:50]}...")
+            phone_display = f" ({msg['sender_phone']})" if msg['sender_phone'] else ""
+            print(f"{i+1}. {msg['unique_id']} - [{msg['date']} {msg['time']}] {msg['sender_name']}{phone_display}: {msg['message'][:50]}...")
     else:
         print("❌ No messages found")
 
