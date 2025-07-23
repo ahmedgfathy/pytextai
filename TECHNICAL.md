@@ -281,6 +281,167 @@ Modify `headers` list and message dictionary structure.
 - Add error handling for edge cases
 - Keep processing statistics for monitoring
 
+## 🔧 Troubleshooting Guide
+
+### Common Issues & Solutions
+
+#### 1. Empty CSV Output
+- **Symptom**: CSV file created but no data rows
+- **Cause**: Chat files not found or incorrect path
+- **Solution**: Verify `whatsapp_chat_exports/` directory exists and contains `_chat*.txt` files
+
+#### 2. Unicode Errors
+- **Symptom**: Garbled text or encoding errors
+- **Cause**: File encoding mismatch
+- **Solution**: Ensure all files are UTF-8 encoded, check file BOM
+
+#### 3. Memory Issues
+- **Symptom**: Script crashes on large files
+- **Cause**: Loading all messages into memory at once
+- **Solution**: Process files individually, consider streaming approach
+
+#### 4. Phone Number Extraction Issues
+- **Symptom**: Valid phone numbers not detected
+- **Cause**: New format not covered by regex patterns
+- **Solution**: Add pattern to `additional_patterns` list
+
+#### 5. Performance Degradation
+- **Symptom**: Very slow processing
+- **Cause**: Inefficient regex patterns or large message content
+- **Solution**: Profile regex performance, optimize patterns
+
+### Error Codes & Meanings
+
+| Error Type | Description | Action |
+|------------|-------------|---------|
+| `FileNotFoundError` | Chat files missing | Check file paths |
+| `UnicodeDecodeError` | Encoding issue | Verify UTF-8 encoding |
+| `MemoryError` | Insufficient RAM | Process smaller batches |
+| `RegexError` | Pattern compilation failed | Check regex syntax |
+
+## 🚀 Performance Optimization Tips
+
+### For Large Datasets (100k+ messages):
+1. **Batch Processing**: Process files in chunks
+2. **Memory Management**: Clear variables after processing
+3. **Regex Compilation**: Pre-compile frequently used patterns
+4. **Output Streaming**: Write to CSV incrementally
+
+### Example Optimization:
+```python
+import re
+# Pre-compile regex patterns
+MOBILE_PATTERN = re.compile(r'(01[0125]\d{8})')
+EMOJI_PATTERN = re.compile("[\U0001F600-\U0001F64F"..."]")
+
+# Process in batches
+def process_large_file(filename, batch_size=1000):
+    batch = []
+    with open(filename, 'r', encoding='utf-8') as f:
+        for line in f:
+            batch.append(line)
+            if len(batch) >= batch_size:
+                process_batch(batch)
+                batch.clear()
+```
+
+## 🔄 Integration Patterns
+
+### Database Integration Example:
+```python
+import sqlite3
+
+def save_to_database(messages):
+    conn = sqlite3.connect('whatsapp_data.db')
+    cursor = conn.cursor()
+    
+    cursor.execute('''CREATE TABLE IF NOT EXISTS messages
+                     (id TEXT PRIMARY KEY, date TEXT, sender TEXT, 
+                      message TEXT, phone TEXT, status TEXT)''')
+    
+    for msg in messages:
+        cursor.execute("INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?)",
+                      (msg['unique_id'], msg['date'], msg['sender_name'],
+                       msg['message'], msg['sender_phone'], msg['status']))
+    
+    conn.commit()
+    conn.close()
+```
+
+### API Integration Example:
+```python
+import requests
+import json
+
+def send_to_api(messages):
+    api_url = "https://your-api.com/messages"
+    headers = {"Content-Type": "application/json"}
+    
+    for msg in messages:
+        payload = {
+            "id": msg['unique_id'],
+            "content": msg['message'],
+            "sender": msg['sender_name'],
+            "phone": msg['sender_phone'],
+            "classification": msg['status']
+        }
+        response = requests.post(api_url, 
+                               data=json.dumps(payload), 
+                               headers=headers)
+```
+
+## 📋 Testing & Validation
+
+### Unit Test Structure:
+```python
+def test_phone_extraction():
+    test_message = "Contact me at 01234567890"
+    result = extract_phone_numbers(test_message)
+    assert "01234567890" in result
+
+def test_emoji_removal():
+    test_text = "Hello 😊 World 🌍"
+    result = remove_emojis(test_text)
+    assert result == "Hello  World "
+
+def test_status_keywords():
+    test_text = "للبيع شقة جميلة"
+    result = extract_status_keywords(test_text)
+    assert "للبيع" in result
+```
+
+### Data Validation Checklist:
+- [ ] All messages have unique IDs
+- [ ] Phone numbers follow Egyptian format
+- [ ] Status keywords are properly classified
+- [ ] Unicode characters preserved
+- [ ] CSV headers match data
+- [ ] No data corruption in output
+
+---
+
+## 🎯 Quick Reference for AI Agents
+
+### Critical Files:
+- `simple_parser.py` - Main processing logic
+- `whatsapp_chat_exports/` - Input data directory
+- `whatsapp_chats.csv` - Output file
+
+### Key Functions:
+- `parse_message()` - Core parsing logic
+- `extract_status_keywords()` - Business classification
+- `remove_emojis()` - Text cleaning
+- `clean_media_references()` - Media cleanup
+
+### Important Variables:
+- `all_messages[]` - Main data container
+- `headers[]` - CSV column definitions
+- `arabic_keywords[]` - Arabic classification terms
+- `english_keywords[]` - English classification terms
+
+### Processing Flow:
+1. File discovery → 2. Line parsing → 3. Data extraction → 4. Cleaning → 5. CSV export
+
 ---
 
 *Last Updated: July 2025*
