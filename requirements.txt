@@ -1,12 +1,25 @@
-# No external dependencies required
-# This script uses only Python built-in libraries:
-# - os
-# - re  
-# - csv
-# - glob
-# - datetime
-# - typing
-
-# If you want to add data analysis capabilities, you can uncomment these:
-# pandas>=1.5.0
-# numpy>=1.21.0
+# WhatsApp Chat Parser - Requirements
+# ====================================
+# 
+# This project uses only Python standard library modules.
+# No external dependencies are required for core functionality.
+#
+# Built-in modules used:
+# - re        (Regular expressions for pattern matching)
+# - csv       (CSV file reading and writing)
+# - glob      (File pattern matching)
+# - os        (Operating system interface)
+#
+# Python Version Requirements:
+# - Minimum: Python 3.6+
+# - Recommended: Python 3.8+
+#
+# Optional dependencies for enhanced functionality:
+# pandas>=1.3.0        # For advanced data analysis (optional)
+# matplotlib>=3.5.0    # For data visualization (optional)
+# seaborn>=0.11.0      # For statistical plots (optional)
+#
+# To install optional dependencies:
+# pip install pandas matplotlib seaborn
+#
+# Note: The core parser works perfectly without any external dependencies!

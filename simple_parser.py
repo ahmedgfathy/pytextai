@@ -143,7 +143,7 @@ def main():
     print("=" * 50)
     
     # Find chat files
-    files = glob.glob("_chat*.txt")
+    files = glob.glob("whatsapp_chat_exports/_chat*.txt")
     print(f"Found {len(files)} chat files")
     
     all_messages = []
