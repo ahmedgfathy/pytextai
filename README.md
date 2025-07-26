@@ -3,12 +3,12 @@
 <div align="center">
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
-![SQLite](https://img.shields.io/badge/SQLite-Database-orange.svg)
+![HTML5](https://img.shields.io/badge/HTML5-CSV%20Viewer-orange.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)
 ![Platform](https://img.shields.io/badge/Platform-Cross%20Platform-lightgrey.svg)
 
-*🚀 Complete real estate data processing system: WhatsApp parsing → Excel merging → SQLite database → Web API*
+*🚀 Streamlined real estate data processing system: WhatsApp parsing → Excel merging → CSV → HTML Viewer*
 
 </div>
 
@@ -19,60 +19,67 @@
 - [Features](#-features)
 - [Quick Start](#-quick-start)
 - [Data Processing Pipeline](#-data-processing-pipeline)
-- [Database System](#-database-system)
-- [Web API](#-web-api)
 - [HTML Viewer](#-html-viewer)
 - [Usage Examples](#-usage-examples)
 - [Technical Stack](#-technical-stack)
 - [Project Structure](#-project-structure)
-- [Performance](#-performance)
 - [Contributing](#-contributing)
 - [License](#-license)
 
 ## 🎯 System Status
 
-✅ **COMPLETED IMPLEMENTATION** - Full production-ready system deployed!
+✅ **SIMPLIFIED CSV-HTML SYSTEM** - Streamlined for direct data viewing!
 
-### 📊 **Current Database Stats**
-- **93,608 total records** migrated to SQLite
+### 📊 **Current CSV Data Stats**
+- **93,608+ total records** processed in CSV format
 - **478 unique senders** identified
 - **4,086 unique regions** processed
 - **4 property types** classified (land, apartment, villa, commercial)
 - **31,036 "للبيع" (for sale)** properties identified
-- **Database size**: 203.3 MB (optimized with indexes)
+- **CSV file size**: 142MB with all merged data
 
-### 🏗️ **Completed Components**
+### 🏗️ **Active Components**
 1. ✅ **WhatsApp Chat Parser** (`simple_parser.py`) - 57K+ messages processed
 2. ✅ **Excel Data Merger** (`safe_excel_merger.py`) - 36K+ records merged safely
-3. ✅ **SQLite Migration** (`csv_to_sqlite.py`) - Full database with optimized schema
-4. ✅ **HTML Viewer** (`whatsapp_data_viewer.html`) - Arabic RTL support with property categories
-5. ✅ **Web API** (`database_web_api.py`) - Flask REST API with full CRUD operations
-6. ✅ **Query Tools** (`database_query_tool.py`) - Interactive command-line interface
+3. ✅ **HTML Viewer** (`whatsapp_data_viewer.html`) - Arabic RTL support with direct CSV loading
 
-### 🔄 **Data Flow Pipeline**
+### 🔄 **Simplified Data Flow Pipeline**
 ```
-WhatsApp Exports → CSV Parser → Excel Merger → SQLite Database → Web API/HTML Viewer
-     (14 files)      (57K msgs)    (36K records)    (93K records)     (Production Ready)
+WhatsApp Exports → CSV Parser → Excel Merger → CSV Database → HTML Viewer
+     (14 files)      (57K msgs)    (36K records)    (93K records)     (Direct Access)
 ```
 
 ## 🎯 Overview
 
-This **Real Estate Data Processing System** is a comprehensive Python-based solution that transforms raw WhatsApp chat exports into a fully structured database system. It processes real estate conversations, merges additional data from Excel files, and provides multiple interfaces for data access including HTML viewer, SQLite database, and REST API.
+This **Real Estate Data Processing System** is a streamlined Python-based solution that transforms raw WhatsApp chat exports into a structured CSV database with an interactive HTML viewer. It processes real estate conversations, merges additional data from Excel files, and provides a clean web interface for data exploration.
 
 ### 🏢 Business Use Cases
 - **Real Estate Analytics**: Complete property database with 93K+ records
 - **Lead Management**: Track senders, contacts, and property inquiries
 - **Market Intelligence**: Analyze property types, regions, and pricing trends
 - **Data Integration**: Merge WhatsApp data with external Excel sources
-- **API Access**: Programmatic access to real estate data
+- **Direct Access**: Instant HTML viewer without complex database setup
 
 ## ✨ Features
 
 ### 🧹 **Advanced Text Processing**
-- **Unicode Normalization**: Handles Arabic, English, and mixed-language content
-- **Emoji Removal**: Comprehensive emoji cleaning using Unicode patterns
-- **Media Reference Cleaning**: Removes "image omitted", "video omitted" patterns
-- **Multi-line Message Handling**: Properly concatenates split messages
+**Unicode Normalization**: Handles Arabic, English, and mixed-language content
+**Emoji Removal**: Comprehensive emoji cleaning using Unicode patterns
+**Media Reference Cleaning**: Removes "image omitted", "video omitted" patterns
+**Multi-line Message Handling**: Properly concatenates split messages
+**Word Frequency Analysis**: Extracts and counts both English and Arabic words from WhatsApp chats, ignoring numbers, emojis, and punctuation. Results are sorted by frequency and written to a text file. Example top results:
+```
+pm: 50,016
+في: 28,427
+للبيع: 25,777
+مطلوب: 23,781
+من: 21,241
+متر: 18,657
+am: 18,568
+على: 16,105
+للتواصل: 15,189
+الحي: 14,868
+```
 
 ### 📊 **Data Integration**
 - **Excel File Merging**: Safely merge multiple Excel files with unique ID generation
@@ -80,18 +87,16 @@ This **Real Estate Data Processing System** is a comprehensive Python-based solu
 - **Data Validation**: Comprehensive data cleaning and validation
 - **Backup System**: Automatic timestamped backups before operations
 
-### 💾 **Database System**
-- **SQLite Database**: Convert CSV data to optimized SQLite database
-- **Indexed Queries**: Performance-optimized with strategic indexes
-- **Data Integrity**: UNIQUE constraints and proper data types
-- **Statistics**: Built-in analytics for senders, regions, property types
-
-### 🌐 **Web Interfaces**
-- **HTML Viewer**: RTL Arabic support with Cairo font and dynamic filtering
-- **REST API**: Flask-based API for programmatic access
-- **Interactive Tools**: Command-line query utilities
+### 🌐 **HTML Viewer Interface**
+- **RTL Arabic Support**: Native right-to-left text rendering with Cairo font
+- **Real-time Filtering**: Dynamic search and filter capabilities
+- **Responsive Design**: Works on desktop and mobile devices
+- **Direct CSV Loading**: No database setup required - loads CSV directly
+- **Property Categorization**: Visual badges for different property types
 
 ## � Data Processing Pipeline
+
+## 📋 Data Processing Pipeline
 
 ### **Stage 1: WhatsApp Parsing** 
 ```bash
@@ -111,127 +116,17 @@ python3 safe_excel_merger.py
 - **Safety**: Automatic backups, data validation, unique ID generation
 - **Result**: Combined WhatsApp + Excel data in single CSV
 
-### **Stage 3: SQLite Database Migration**
+### **Stage 3: HTML Viewer**
 ```bash
-python3 csv_to_sqlite.py
+# Simply open the HTML file in a web browser
+open whatsapp_data_viewer.html
 ```
-- **Input**: Merged CSV file (136.2 MB)
-- **Output**: `real_estate_data.db` SQLite database (203.3 MB)
-- **Features**: Optimized schema, strategic indexes, data integrity constraints
-- **Performance**: Chunked processing, memory-efficient migration
+- **Input**: `whatsapp_chats.csv` (loaded automatically)
+- **Features**: Real-time filtering, search, pagination
+- **Interface**: Arabic RTL support, responsive design
+- **Performance**: Handles 93K+ records efficiently
 
-### **Stage 4: Data Access Interfaces**
-
-#### **HTML Viewer** (Arabic RTL Support)
-```bash
-# Open whatsapp_data_viewer.html in browser
-```
-- ✅ Property types in Arabic (شقة، فيلا، أرض، تجاري)
-- ✅ Property categories with color-coded badges (سكني، تجاري، صناعي، محل تجاري)
-- ✅ Cairo Google Font for enhanced Arabic display
-- ✅ Dynamic filtering and search functionality
-
-#### **REST API Server**
-```bash
-python3 database_web_api.py
-# API available at http://localhost:5000
-```
-- ✅ RESTful endpoints for all data operations
-- ✅ JSON responses with pagination support
-- ✅ Search functionality across all fields
-- ✅ CORS enabled for frontend integration
-
-#### **Interactive Query Tool**
-```bash
-python3 database_query_tool.py --interactive
-```
-- ✅ Command-line interface for database queries
-- ✅ Built-in statistics and reporting
-- ✅ Custom SQL query execution
-- ✅ Data export capabilities
-
-## 💾 Database System
-
-### **Schema Design**
-```sql
-CREATE TABLE properties (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    unique_id TEXT UNIQUE,
-    file_source TEXT,
-    date TEXT,
-    time TEXT,
-    sender_name TEXT,
-    sender_phone TEXT,
-    sender_phone_2 TEXT,
-    message TEXT,
-    message_backup TEXT,
-    status TEXT,
-    region TEXT,
-    property_type TEXT,
-    line_number INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### **Performance Optimizations**
-- **8 Strategic Indexes**: On date, time, sender_name, sender_phone, region, property_type, file_source, unique_id
-- **Chunked Processing**: 10,000 records per batch during migration
-- **Memory Efficiency**: Streaming CSV processing for large datasets
-- **Data Integrity**: UNIQUE constraints and foreign key relationships
-
-### **Database Statistics**
-- **Total Records**: 93,608
-- **Unique Senders**: 478 
-- **Unique Regions**: 4,086
-- **Property Types**: 4 (land: 22,662 | apartment: 11,319 | villa: 10,330 | commercial: 2,153)
-- **Arabic "للبيع" Properties**: 31,036
-- **Records with Phone Numbers**: High coverage for lead generation
-
-## 🌐 Web API
-
-### **Available Endpoints**
-```
-GET  /                     # API documentation
-GET  /stats                # Database statistics
-GET  /properties           # List properties (with pagination)
-GET  /search?q=keyword     # Search properties
-GET  /regions              # List regions with counts
-GET  /senders              # List senders with message counts
-GET  /property-types       # Property type distribution
-GET  /property/<id>        # Get specific property details
-```
-
-### **API Usage Examples**
-```bash
-# Get database statistics
-curl http://localhost:5000/stats
-
-# Search for apartments
-curl "http://localhost:5000/search?q=شقة&limit=20"
-
-# Get properties in specific region
-curl "http://localhost:5000/properties?region=القاهرة&limit=10"
-
-# Get top regions
-curl http://localhost:5000/regions?limit=30
-```
-
-### **Response Format**
-```json
-{
-  "status": "success",
-  "data": [...],
-  "pagination": {
-    "limit": 50,
-    "offset": 0,
-    "total": 93608,
-    "has_more": true
-  },
-  "timestamp": "2025-07-23T12:23:08"
-}
-```
-
-## 🎨 HTML Viewer
+##  HTML Viewer
 
 ### **Arabic Language Features**
 - **RTL Text Direction**: Proper right-to-left text flow
@@ -257,36 +152,16 @@ function determinePropertyCategory(message, propertyType) {
 
 ## 🚀 Quick Start
 
-### **For New Users (Complete Pipeline)**
+### **Complete Pipeline**
 ```bash
-# 1. Clone repository
-git clone https://github.com/yourusername/whatsapp-chat-parser.git
-cd whatsapp-chat-parser
+# 1. Parse WhatsApp chats
+python3 simple_parser.py
 
-# 2. Prepare WhatsApp exports in whatsapp_chat_exports/
-# 3. Add Excel files to csvs/ directory (optional)
+# 2. Merge Excel data (optional)
+python3 safe_excel_merger.py
 
-# 4. Run complete pipeline
-python3 simple_parser.py          # Parse WhatsApp chats
-python3 safe_excel_merger.py      # Merge Excel data
-python3 csv_to_sqlite.py          # Create SQLite database
-
-# 5. Start web interfaces
-python3 database_web_api.py       # Start REST API (port 5000)
-# Open whatsapp_data_viewer.html   # Open HTML viewer in browser
-```
-
-### **For Existing Database Users**
-```bash
-# Query database directly
-python3 database_query_tool.py --stats
-python3 database_query_tool.py --interactive
-
-# Start API server
-python3 database_web_api.py
-
-# Quick SQL queries
-sqlite3 real_estate_data.db "SELECT COUNT(*) FROM properties;"
+# 3. Open HTML viewer
+open whatsapp_data_viewer.html
 ```
 
 ### 1. Clone the Repository

@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Real Estate Data Viewer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'whatsapp': '#25D366',
+                        'whatsapp-dark': '#075E54',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            font-size: 16px; /* Increased base font size */
+        }
+        
+        .rtl-text {
+            direction: rtl;
+            text-align: right;
+        }
+        
+        .ltr-text {
+            direction: ltr;
+            text-align: left;
+        }
+        
+        .search-highlight {
+            background-color: #fef08a;
+            font-weight: 700; /* Made bolder */
+        }
+        
+        .table-row:hover {
+            background-color: #f0fdf4;
+        }
+        
+        .status-badge {
+            font-size: 0.85rem; /* Increased from 0.75rem */
+            padding: 0.375rem 0.75rem; /* Increased padding */
+            border-radius: 0.5rem;
+            margin: 0.25rem;
+            display: inline-block;
+            font-weight: 600; /* Made bolder */
+        }
+        
+        .property-land { background-color: #dcfce7; color: #16a34a; }
+        .property-apartment { background-color: #dbeafe; color: #2563eb; }
+        .property-villa { background-color: #fef3c7; color: #d97706; }
+        .property-commercial { background-color: #f3e8ff; color: #9333ea; }
+        
+        .category-residential { background-color: #ecfdf5; color: #059669; }
+        .category-commercial { background-color: #fef3c7; color: #d97706; }
+        .category-factory { background-color: #e7e5e4; color: #57534e; }
+        .category-shop { background-color: #fce7f3; color: #be185d; }
+        
+        .phone-number {
+            font-family: 'Courier New', monospace;
+            background-color: #f1f5f9;
+            padding: 0.25rem 0.5rem; /* Increased padding */
+            border-radius: 0.375rem;
+            font-size: 0.85rem; /* Increased from 0.75rem */
+            font-weight: 600; /* Made bolder */
+        }
+        
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.4; /* Increased line height */
+            max-height: 2.8em;
+        }
+        
+        /* Table styling for full screen */
+        .table-container {
+            width: calc(100vw - 2em); /* Full viewport width minus 2em */
+            margin-left: calc(-50vw + 50% + 1em); /* Center the container with 1em margin on each side */
+            overflow-x: auto;
+        }
+        
+        .data-table {
+            min-width: 100%;
+            font-size: 15px; /* Increased table font size */
+        }
+        
+        .data-table th {
+            font-size: 13px; /* Increased header font size */
+            font-weight: 700; /* Made headers bolder */
+            padding: 16px 12px; /* Increased padding */
+        }
+        
+        .data-table td {
+            padding: 14px 12px; /* Increased cell padding */
+            font-weight: 500; /* Made cell text medium weight */
+        }
+        
+        /* Header styling */
+        .header-title {
+            font-size: 1.5rem; /* Increased from 1.25rem */
+            font-weight: 800; /* Made bolder */
+        }
+        
+        .header-subtitle {
+            font-size: 1rem; /* Increased */
+            font-weight: 600;
+        }
+        
+        /* Statistics styling */
+        .stat-number {
+            font-size: 2.5rem; /* Increased from 2rem */
+            font-weight: 800; /* Made bolder */
+        }
+        
+        .stat-label {
+            font-size: 0.95rem; /* Increased */
+            font-weight: 600; /* Made bolder */
+        }
+        
+        /* Filter and button styling */
+        .filter-label {
+            font-size: 0.95rem; /* Increased */
+            font-weight: 600; /* Made bolder */
+        }
+        
+        .filter-input, .filter-select {
+            font-size: 0.95rem; /* Increased */
+            font-weight: 500;
+            padding: 12px 16px; /* Increased padding */
+        }
+        
+        .section-title {
+            font-size: 1.25rem; /* Increased */
+            font-weight: 700; /* Made bolder */
+        }
+        
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            background-color: #f9fafb;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            border-color: #25D366;
+            background-color: #f0fdf4;
+        }
+        
+        .upload-area.dragover {
+            border-color: #25D366;
+            background-color: #dcfce7;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        .action-button {
+            padding: 0.375rem 0.75rem; /* Increased padding */
+            margin: 0.25rem;
+            border-radius: 0.375rem;
+            font-size: 0.8rem; /* Increased from 0.65rem */
+            font-weight: 600; /* Made bolder */
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        
+        .btn-view {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .btn-view:hover {
+            background-color: #2563eb;
+        }
+        
+        .btn-edit {
+            background-color: #f59e0b;
+            color: white;
+        }
+        .btn-edit:hover {
+            background-color: #d97706;
+        }
+        
+        .btn-delete {
+            background-color: #ef4444;
+            color: white;
+        }
+        .btn-delete:hover {
+            background-color: #dc2626;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            direction: rtl;
+        }
+        
+        .close {
+            color: #aaa;
+            float: left;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: black;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-whatsapp-dark text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="text-left">
+                    <div class="stat-number text-lg font-semibold" id="total-records">0</div>
+                    <div class="text-sm text-green-200 font-semibold">إجمالي السجلات</div>
+                </div>
+                <div class="flex items-center space-x-reverse space-x-4">
+                    <div class="bg-whatsapp p-3 rounded-lg">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.893 3.690"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="header-title">WhatsApp Real Estate Data Viewer</h1>
+                        <p class="header-subtitle text-green-200">عارض بيانات العقارات من واتساب</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Loading Section -->
+    <div class="container mx-auto px-4 py-6" id="loading-section">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="text-center">
+                <div class="animate-spin inline-block w-8 h-8 border-4 border-current border-t-transparent text-whatsapp rounded-full mb-4" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">جاري تحميل البيانات...</h3>
+                <p class="text-sm text-gray-500">يتم تحميل بيانات WhatsApp من ملف whatsapp_chats.csv</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Bar -->
+    <div class="bg-white shadow-sm border-b" id="stats-section" style="display: none;">
+        <div class="container mx-auto px-4 py-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="stat-number text-green-600" id="with-phone">0</div>
+                    <div class="stat-label text-gray-600">لديهم أرقام هواتف</div>
+                </div>
+                <div class="text-center">
+                    <div class="stat-number text-blue-600" id="apartments">0</div>
+                    <div class="stat-label text-gray-600">شقق</div>
+                </div>
+                <div class="text-center">
+                    <div class="stat-number text-orange-600" id="villas">0</div>
+                    <div class="stat-label text-gray-600">فيلات</div>
+                </div>
+                <div class="text-center">
+                    <div class="stat-number text-emerald-600" id="lands">0</div>
+                    <div class="stat-label text-gray-600">قطع أراضي</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="px-4 py-6" id="main-content" style="display: none;">
+        <!-- Filters -->
+        <div class="container mx-auto mb-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="section-title mb-4">المرشحات والبحث</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div>
+                        <label class="block filter-label text-gray-700 mb-2">البحث في الرسائل</label>
+                        <input type="text" id="search-input" placeholder="ابحث في الرسائل..." class="filter-input w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-whatsapp">
+                    </div>
+                    <div>
+                        <label class="block filter-label text-gray-700 mb-2">نوع العقار</label>
+                        <select id="property-filter" class="filter-select w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-whatsapp">
+                            <option value="">جميع الأنواع</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block filter-label text-gray-700 mb-2">الحالة</label>
+                        <select id="status-filter" class="filter-select w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-whatsapp">
+                            <option value="">جميع الحالات</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block filter-label text-gray-700 mb-2">التاريخ</label>
+                        <input type="date" id="date-filter" class="filter-input w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-whatsapp">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="clearFilters()" class="w-full px-4 py-3 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors font-semibold">
+                            مسح المرشحات
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-container bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="data-table w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">التاريخ</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المرسل</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الهاتف</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الرسالة</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">نوع العقار</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المنطقة</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الحالة</th>
+                            <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    <button onclick="previousPage()" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-semibold rounded-md text-gray-700 bg-white hover:bg-gray-50">السابق</button>
+                    <button onclick="nextPage()" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-semibold rounded-md text-gray-700 bg-white hover:bg-gray-50">التالي</button>
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700 font-semibold">
+                            عرض <span class="font-bold" id="showing-from">0</span> إلى <span class="font-bold" id="showing-to">0</span> من 
+                            <span class="font-bold" id="total-showing">0</span> نتيجة
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            <button onclick="previousPage()" class="relative inline-flex items-center px-3 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-semibold text-gray-500 hover:bg-gray-50">السابق</button>
+                            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-semibold text-gray-700" id="page-info">Page 1 of 1</span>
+                            <button onclick="nextPage()" class="relative inline-flex items-center px-3 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-semibold text-gray-500 hover:bg-gray-50">التالي</button>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for viewing details -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 class="text-xl font-bold mb-4">تفاصيل السجل</h2>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <!-- Modal for editing -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2 class="text-xl font-bold mb-4">تعديل السجل</h2>
+            <form id="editForm">
+                <div id="editFormContent"></div>
+                <div class="mt-6 flex justify-end space-x-reverse space-x-3">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">إلغاء</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const recordsPerPage = 50;
+        let isLoading = false;
+
+        function loadCSVData() {
+            try {
+                isLoading = true;
+                showLoadingMessage();
+                
+                // Load CSV file automatically
+                fetch('whatsapp_chats.csv')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then(csvText => {
+                        currentData = parseCSV(csvText);
+                        if (currentData.length > 0) {
+                            // Add property category to each record
+                            currentData = currentData.map(item => ({
+                                ...item,
+                                property_category: determinePropertyCategory(item.message, item.property_type)
+                            }));
+                            
+                            filteredData = [...currentData];
+                            populateFilters();
+                            updateStatistics();
+                            displayData();
+                            
+                            // Show main content and hide loading section
+                            document.getElementById('loading-section').style.display = 'none';
+                            document.getElementById('stats-section').style.display = 'block';
+                            document.getElementById('main-content').style.display = 'block';
+                            
+                            console.log(`✅ تم تحميل ${currentData.length} سجل بنجاح`);
+                        } else {
+                            showErrorMessage('الملف فارغ أو تنسيق غير صحيح');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('خطأ في تحميل البيانات:', error);
+                        showErrorMessage('خطأ في تحميل ملف whatsapp_chats.csv. تأكد من وجود الملف في نفس المجلد.');
+                    });
+            } catch (error) {
+                console.error('خطأ في تحميل البيانات:', error);
+                showErrorMessage('خطأ في قراءة الملف. تأكد من أن الملف بتنسيق CSV صحيح.');
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        function showLoadingMessage() {
+            // Loading section is already visible by default
+            console.log('Loading data...');
+        }
+
+        function showErrorMessage(message) {
+            const loadingSection = document.getElementById('loading-section');
+            if (loadingSection) {
+                loadingSection.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                        <div class="text-center">
+                            <div class="text-red-500 text-4xl mb-4">❌</div>
+                            <h3 class="text-lg font-semibold mb-2 text-red-600">خطأ في تحميل البيانات</h3>
+                            <p class="text-sm text-gray-500">${message}</p>
+                            <button onclick="window.location.reload()" class="mt-4 px-4 py-2 bg-whatsapp text-white rounded-md hover:bg-whatsapp-dark transition-colors">
+                                إعادة المحاولة
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Parse CSV data
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            if (lines.length < 2) return [];
+            
+            const headers = parseCSVLine(lines[0]);
+            
+            return lines.slice(1).map(line => {
+                const values = parseCSVLine(line);
+                const obj = {};
+                headers.forEach((header, index) => {
+                    obj[header] = values[index] || '';
+                });
+                return obj;
+            }).filter(row => row.unique_id); // Filter out empty rows
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    if (inQuotes && line[i + 1] === '"') {
+                        current += '"';
+                        i++; // Skip next quote
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            return result;
+        }
+
+        function populateFilters() {
+            // Property types
+            const propertyTypes = [...new Set(currentData.map(item => item.property_type).filter(Boolean))];
+            const propertySelect = document.getElementById('property-filter');
+            propertySelect.innerHTML = '<option value="">جميع الأنواع</option>';
+            propertyTypes.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = formatPropertyTypeText(type);
+                propertySelect.appendChild(option);
+            });
+
+            // Status
+            const statuses = [...new Set(currentData.map(item => item.status).filter(Boolean).flatMap(status => status.split(',')).map(s => s.trim()))];
+            const statusSelect = document.getElementById('status-filter');
+            statusSelect.innerHTML = '<option value="">جميع الحالات</option>';
+            statuses.forEach(status => {
+                const option = document.createElement('option');
+                option.value = status;
+                option.textContent = status;
+                statusSelect.appendChild(option);
+            });
+        }
+
+        function formatPropertyTypeText(type) {
+            const typeMap = {
+                'land': 'قطعة أرض',
+                'apartment': 'شقة',
+                'villa': 'فيلا',
+                'commercial': 'تجاري'
+            };
+            return typeMap[type] || type;
+        }
+
+        // Function to determine property category from message content
+        function determinePropertyCategory(message, propertyType) {
+            if (!message) return 'غير محدد';
+            
+            const text = message.toLowerCase();
+            
+            // Commercial keywords
+            const commercialKeywords = [
+                'محل', 'مطعم', 'كافيه', 'صيدلية', 'عيادة', 'مكتب', 'بنك', 'شركة',
+                'استوديو', 'معرض', 'صالون', 'مركز', 'سوق', 'مول', 'تجاري', 'عمارة تجارية',
+                'shop', 'restaurant', 'cafe', 'pharmacy', 'clinic', 'office', 'bank',
+                'studio', 'showroom', 'salon', 'center', 'mall', 'commercial'
+            ];
+            
+            // Factory keywords
+            const factoryKeywords = [
+                'مصنع', 'ورشة', 'مستودع', 'صناعي', 'انتاج', 'تصنيع', 'مخزن',
+                'منطقة صناعية', 'قطاع صناعي', 'خط انتاج', 'معمل',
+                'factory', 'warehouse', 'industrial', 'production', 'manufacturing',
+                'storage', 'plant', 'mill', 'workshop'
+            ];
+            
+            // Shop specific keywords
+            const shopKeywords = [
+                'محل ملابس', 'محل احذية', 'محل عطور', 'محل ذهب', 'محل موبايل',
+                'محل كمبيوتر', 'محل اكسسوارات', 'بوتيك', 'متجر',
+                'clothing store', 'shoe store', 'perfume shop', 'jewelry store',
+                'mobile shop', 'computer store', 'boutique', 'store'
+            ];
+            
+            // Residential keywords
+            const residentialKeywords = [
+                'شقة', 'فيلا', 'بيت', 'منزل', 'دوبليكس', 'روف', 'استوديو سكني',
+                'عمارة سكنية', 'كمبوند', 'وحدة سكنية', 'قطعة ارض سكنية',
+                'apartment', 'villa', 'house', 'home', 'duplex', 'roof',
+                'residential', 'compound', 'unit'
+            ];
+            
+            // Check for factory first (most specific)
+            if (factoryKeywords.some(keyword => text.includes(keyword))) {
+                return 'صناعي';
+            }
+            
+            // Check for shop (specific type of commercial)
+            if (shopKeywords.some(keyword => text.includes(keyword))) {
+                return 'محل تجاري';
+            }
+            
+            // Check for commercial
+            if (commercialKeywords.some(keyword => text.includes(keyword))) {
+                return 'تجاري';
+            }
+            
+            // Check for residential
+            if (residentialKeywords.some(keyword => text.includes(keyword))) {
+                return 'سكني';
+            }
+            
+            // Fallback based on property type
+            if (propertyType) {
+                if (['apartment', 'villa', 'شقة', 'فيلا'].includes(propertyType)) {
+                    return 'سكني';
+                }
+                if (['commercial', 'تجاري'].includes(propertyType)) {
+                    return 'تجاري';
+                }
+            }
+            
+            return 'غير محدد';
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const total = filteredData.length;
+            const withPhone = filteredData.filter(item => item.sender_phone || item.sender_phone_2).length;
+            const apartments = filteredData.filter(item => item.property_type === 'شقة' || item.property_type === 'apartment').length;
+            const villas = filteredData.filter(item => item.property_type === 'فيلا' || item.property_type === 'villa').length;
+            const lands = filteredData.filter(item => item.property_type === 'قطعة أرض' || item.property_type === 'land').length;
+
+            document.getElementById('total-records').textContent = total.toLocaleString();
+            document.getElementById('with-phone').textContent = withPhone.toLocaleString();
+            document.getElementById('apartments').textContent = apartments.toLocaleString();
+            document.getElementById('villas').textContent = villas.toLocaleString();
+            document.getElementById('lands').textContent = lands.toLocaleString();
+        }
+
+        // Display data in table
+        function displayData() {
+            const tbody = document.getElementById('data-table-body');
+            const startIndex = (currentPage - 1) * recordsPerPage;
+            const endIndex = Math.min(startIndex + recordsPerPage, filteredData.length);
+            const pageData = filteredData.slice(startIndex, endIndex);
+
+            if (pageData.length === 0 && filteredData.length === 0 && !isLoading) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="px-6 py-12 text-center">
+                            <p class="text-gray-500">لا توجد بيانات لعرضها</p>
+                        </td>
+                    </tr>
+                `;
+                updatePaginationInfo();
+                return;
+            }
+
+            tbody.innerHTML = pageData.map((item, index) => `
+                <tr class="table-row">
+                    <td class="px-3 py-2 text-sm text-gray-500">${item.unique_id || '-'}</td>
+                    <td class="px-3 py-2 text-sm text-gray-500">${item.date || '-'}</td>
+                    <td class="px-3 py-2 text-sm text-gray-900 font-medium">${item.sender_name || '-'}</td>
+                    <td class="px-3 py-2 text-sm">
+                        ${item.sender_phone ? `<span class="phone-number">${item.sender_phone}</span>` : ''}
+                        ${item.sender_phone_2 ? `<br><span class="phone-number">${item.sender_phone_2}</span>` : ''}
+                    </td>
+                    <td class="px-3 py-2 text-sm text-gray-900 rtl-text">
+                        <div class="line-clamp-2">${highlightSearchTerm(item.message || '-')}</div>
+                    </td>
+                    <td class="px-3 py-2 text-sm">${formatPropertyType(item.property_type)}</td>
+                    <td class="px-3 py-2 text-sm text-gray-600">${item.region || '-'}</td>
+                    <td class="px-3 py-2 text-sm">${formatStatus(item.status)}</td>
+                    <td class="px-3 py-2 text-sm text-center">
+                        <button onclick="viewDetails(${(currentPage - 1) * recordsPerPage + index})" class="action-button btn-view">عرض</button>
+                        <button onclick="editRecord(${(currentPage - 1) * recordsPerPage + index})" class="action-button btn-edit">تعديل</button>
+                        <button onclick="deleteRecord(${(currentPage - 1) * recordsPerPage + index})" class="action-button btn-delete">حذف</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            updatePaginationInfo();
+        }
+
+        function highlightSearchTerm(text) {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            if (!searchTerm || !text) return text;
+            
+            const regex = new RegExp(`(${searchTerm})`, 'gi');
+            return text.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
+        function formatStatus(status) {
+            if (!status) return '';
+            return status.split(',').map(s => 
+                `<span class="status-badge bg-green-100 text-green-800">${s.trim()}</span>`
+            ).join('');
+        }
+
+        function formatPropertyType(type) {
+            if (!type) return '';
+            
+            // Map English property types to Arabic (for backward compatibility)
+            const propertyTypeMap = {
+                'land': 'قطعة أرض',
+                'apartment': 'شقة',
+                'villa': 'فيلا',
+                'commercial': 'تجاري'
+            };
+            
+            // Check if it's already Arabic
+            const arabicTypes = ['قطعة أرض', 'شقة', 'فيلا', 'تجاري'];
+            let arabicType, englishType;
+            
+            if (arabicTypes.includes(type)) {
+                arabicType = type;
+                // Get English equivalent for CSS class
+                const reverseMap = {
+                    'قطعة أرض': 'land',
+                    'شقة': 'apartment',
+                    'فيلا': 'villa',
+                    'تجاري': 'commercial'
+                };
+                englishType = reverseMap[type] || type;
+            } else {
+                arabicType = propertyTypeMap[type] || type;
+                englishType = type;
+            }
+            
+            const className = `property-${englishType}`;
+            return `<span class="status-badge ${className}">${arabicType}</span>`;
+        }
+
+        function updatePaginationInfo() {
+            const startIndex = (currentPage - 1) * recordsPerPage + 1;
+            const endIndex = Math.min(currentPage * recordsPerPage, filteredData.length);
+            const total = filteredData.length;
+
+            document.getElementById('showing-from').textContent = startIndex;
+            document.getElementById('showing-to').textContent = endIndex;
+            document.getElementById('total-showing').textContent = total;
+            document.getElementById('page-info').textContent = `Page ${currentPage} of ${Math.ceil(total / recordsPerPage)}`;
+        }
+
+        // Filtering functions
+        function applyFilters() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const propertyType = document.getElementById('property-filter').value;
+            const status = document.getElementById('status-filter').value;
+            const date = document.getElementById('date-filter').value;
+
+            filteredData = currentData.filter(item => {
+                // Enhanced search - search across ALL columns
+                const matchesSearch = !searchTerm || 
+                    (item.message && item.message.toLowerCase().includes(searchTerm)) ||
+                    (item.sender_name && item.sender_name.toLowerCase().includes(searchTerm)) ||
+                    (item.sender_phone && item.sender_phone.includes(searchTerm)) ||
+                    (item.region && item.region.toLowerCase().includes(searchTerm)) ||
+                    (item.status && item.status.toLowerCase().includes(searchTerm)) ||
+                    (item.unique_id && item.unique_id.toLowerCase().includes(searchTerm));
+
+                const matchesPropertyType = !propertyType || item.property_type === propertyType;
+                const matchesStatus = !status || (item.status && item.status.includes(status));
+                
+                // Improved date matching
+                let matchesDate = true;
+                if (date) {
+                    const filterDate = new Date(date);
+                    const itemDate = new Date(item.date.split('/').reverse().join('-')); // Convert DD/MM/YYYY to YYYY-MM-DD
+                    matchesDate = itemDate.toDateString() === filterDate.toDateString();
+                }
+
+                return matchesSearch && matchesPropertyType && matchesStatus && matchesDate;
+            });
+
+            currentPage = 1;
+            updateStatistics();
+            displayData();
+        }
+
+        function clearFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('property-filter').value = '';
+            document.getElementById('status-filter').value = '';
+            document.getElementById('date-filter').value = '';
+            applyFilters();
+        }
+
+        // Debounced search for better performance
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        const debouncedSearch = debounce(applyFilters, 300);
+
+        function nextPage() {
+            const totalPages = Math.ceil(filteredData.length / recordsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayData();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                displayData();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').style.display = 'none';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // Action functions
+        function viewDetails(index) {
+            const item = filteredData[index];
+            const modal = document.getElementById('detailsModal');
+            const content = document.getElementById('modalContent');
+            
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">ID</label>
+                            <p class="mt-1 text-sm text-gray-900">${item.unique_id || '-'}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">التاريخ</label>
+                            <p class="mt-1 text-sm text-gray-900">${item.date || '-'}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">اسم المرسل</label>
+                            <p class="mt-1 text-sm text-gray-900">${item.sender_name || '-'}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">الهاتف الأول</label>
+                            <p class="mt-1 text-sm text-gray-900 font-mono">${item.sender_phone || '-'}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">الهاتف الثاني</label>
+                            <p class="mt-1 text-sm text-gray-900 font-mono">${item.sender_phone_2 || '-'}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">نوع العقار</label>
+                            <p class="mt-1 text-sm text-gray-900">${item.property_type || '-'}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">المنطقة</label>
+                            <p class="mt-1 text-sm text-gray-900">${item.region || '-'}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">الحالة</label>
+                            <p class="mt-1 text-sm text-gray-900">${item.status || '-'}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">الرسالة</label>
+                        <div class="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-900 rtl-text">${item.message || '-'}</div>
+                    </div>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+
+        function editRecord(index) {
+            const item = filteredData[index];
+            const modal = document.getElementById('editModal');
+            const content = document.getElementById('editFormContent');
+            
+            content.innerHTML = `
+                <input type="hidden" id="editIndex" value="${index}">
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">اسم المرسل</label>
+                            <input type="text" id="edit_sender_name" value="${item.sender_name || ''}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">الهاتف الأول</label>
+                            <input type="text" id="edit_sender_phone" value="${item.sender_phone || ''}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">الهاتف الثاني</label>
+                            <input type="text" id="edit_sender_phone_2" value="${item.sender_phone_2 || ''}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">نوع العقار</label>
+                            <select id="edit_property_type" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">اختر النوع</option>
+                                <option value="شقة" ${item.property_type === 'شقة' ? 'selected' : ''}>شقة</option>
+                                <option value="فيلا" ${item.property_type === 'فيلا' ? 'selected' : ''}>فيلا</option>
+                                <option value="قطعة أرض" ${item.property_type === 'قطعة أرض' ? 'selected' : ''}>قطعة أرض</option>
+                                <option value="تجاري" ${item.property_type === 'تجاري' ? 'selected' : ''}>تجاري</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">المنطقة</label>
+                            <input type="text" id="edit_region" value="${item.region || ''}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">الحالة</label>
+                            <input type="text" id="edit_status" value="${item.status || ''}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">الرسالة</label>
+                        <textarea id="edit_message" rows="4" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">${item.message || ''}</textarea>
+                    </div>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+
+        function deleteRecord(index) {
+            const item = filteredData[index];
+            if (confirm(`هل أنت متأكد من حذف السجل ${item.unique_id}؟`)) {
+                // Find the index in the original data
+                const originalIndex = currentData.findIndex(record => record.unique_id === item.unique_id);
+                if (originalIndex !== -1) {
+                    currentData.splice(originalIndex, 1);
+                    applyFilters(); // Refresh the display
+                    alert('تم حذف السجل بنجاح');
+                }
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-load CSV data on page load
+            loadCSVData();
+            
+            document.getElementById('search-input').addEventListener('input', debouncedSearch);
+            document.getElementById('property-filter').addEventListener('change', applyFilters);
+            document.getElementById('status-filter').addEventListener('change', applyFilters);
+            document.getElementById('date-filter').addEventListener('change', applyFilters);
+            
+            // Handle edit form submission
+            document.getElementById('editForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const index = parseInt(document.getElementById('editIndex').value);
+                const item = filteredData[index];
+                
+                // Update the item
+                const updatedItem = {
+                    ...item,
+                    sender_name: document.getElementById('edit_sender_name').value,
+                    sender_phone: document.getElementById('edit_sender_phone').value,
+                    sender_phone_2: document.getElementById('edit_sender_phone_2').value,
+                    property_type: document.getElementById('edit_property_type').value,
+                    region: document.getElementById('edit_region').value,
+                    status: document.getElementById('edit_status').value,
+                    message: document.getElementById('edit_message').value
+                };
+                
+                // Find and update in original data
+                const originalIndex = currentData.findIndex(record => record.unique_id === item.unique_id);
+                if (originalIndex !== -1) {
+                    currentData[originalIndex] = updatedItem;
+                    applyFilters(); // Refresh the display
+                    closeEditModal();
+                    alert('تم تحديث السجل بنجاح');
+                }
+            });
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'f') {
+                    e.preventDefault();
+                    document.getElementById('search-input').focus();
+                }
+                if (e.key === 'Escape') {
+                    closeModal();
+                    closeEditModal();
+                }
+            });
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', function(e) {
+                const detailsModal = document.getElementById('detailsModal');
+                const editModal = document.getElementById('editModal');
+                
+                if (e.target === detailsModal) {
+                    closeModal();
+                }
+                if (e.target === editModal) {
+                    closeEditModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

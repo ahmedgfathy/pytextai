@@ -26,9 +26,22 @@ Raw .txt files → Unicode Cleaning → Message Parsing → Data Extraction → 
 - Initializes data structures for message storage
 
 #### Phase 2: Text Processing & Cleaning
-- **Unicode Normalization**: Removes directional marks, non-breaking spaces
-- **Line Parsing**: Extracts timestamp, sender, and message content
-- **Multi-line Message Handling**: Concatenates continuation lines
+**Unicode Normalization**: Removes directional marks, non-breaking spaces
+**Line Parsing**: Extracts timestamp, sender, and message content
+**Multi-line Message Handling**: Concatenates continuation lines
+**Word Frequency Analysis**: Extracts and counts both English and Arabic words from WhatsApp chats, ignoring numbers, emojis, and punctuation. Results are sorted by frequency and written to a text file. Example top results:
+```
+pm: 50,016
+في: 28,427
+للبيع: 25,777
+مطلوب: 23,781
+من: 21,241
+متر: 18,657
+am: 18,568
+على: 16,105
+للتواصل: 15,189
+الحي: 14,868
+```
 
 #### Phase 3: Data Extraction
 - **Phone Number Extraction**: Multiple regex patterns for various formats
@@ -409,52 +422,7 @@ def process_large_file(filename, batch_size=1000):
                 batch.clear()
 ```
 
-## 🔄 Integration Patterns
-
-### Database Integration Example:
-```python
-import sqlite3
-
-def save_to_database(messages):
-    conn = sqlite3.connect('whatsapp_data.db')
-    cursor = conn.cursor()
-    
-    cursor.execute('''CREATE TABLE IF NOT EXISTS messages
-                     (id TEXT PRIMARY KEY, date TEXT, sender TEXT, 
-                      message TEXT, phone TEXT, status TEXT)''')
-    
-    for msg in messages:
-        cursor.execute("INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?)",
-                      (msg['unique_id'], msg['date'], msg['sender_name'],
-                       msg['message'], msg['sender_phone'], msg['status']))
-    
-    conn.commit()
-    conn.close()
-```
-
-### API Integration Example:
-```python
-import requests
-import json
-
-def send_to_api(messages):
-    api_url = "https://your-api.com/messages"
-    headers = {"Content-Type": "application/json"}
-    
-    for msg in messages:
-        payload = {
-            "id": msg['unique_id'],
-            "content": msg['message'],
-            "sender": msg['sender_name'],
-            "phone": msg['sender_phone'],
-            "classification": msg['status']
-        }
-        response = requests.post(api_url, 
-                               data=json.dumps(payload), 
-                               headers=headers)
-```
-
-## 📋 Testing & Validation
+##  Testing & Validation
 
 ### Unit Test Structure:
 ```python

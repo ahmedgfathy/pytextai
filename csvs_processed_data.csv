@@ -1,0 +1,3 @@
+unique_id,file_source,sheet_name,row_number,property_type,location,area,price,contact,status,description,raw_data,date_processed
+CSV001,csvs/sample.xlsx,Sheet1,1,شقة,الحي العاشر,120,500000,01234567890,متاح,شقة للبيع في الحي العاشر مساحة 120 متر,,2025-07-26 07:26:56
+CSV002,csvs/sample.xlsx,Sheet1,2,فيلا,مدينة نصر,300,1200000,01987654321,للبيع,فيلا للبيع في مدينة نصر مساحة 300 متر,,2025-07-26 07:26:56
