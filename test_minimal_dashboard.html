@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dashboard - 10 Records</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #eee;
+        }
+        
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #333;
+        }
+        
+        #console-log {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 Test Dashboard</h1>
+            <p>Testing with 10 property records only</p>
+        </div>
+        
+        <div id="console-log">Console logs will appear here...</div>
+        
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title">المناطق (10 عقارات)</div>
+                <canvas id="regionsChart" style="max-height: 300px;"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">أنواع العقارات</div>
+                <canvas id="typesChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Console logging to page
+        function logToPage(message) {
+            const consoleDiv = document.getElementById('console-log');
+            consoleDiv.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            console.log(message);
+        }
+        
+        // Test data from first 10 rows
+        const testData = {
+            "regional_data": [
+                {"region": "ابو الهول", "count": 2},
+                {"region": "الياسمين", "count": 2},
+                {"region": "الاندلس", "count": 1},
+                {"region": "هايد بارك", "count": 1},
+                {"region": "اللوتس", "count": 1},
+                {"region": "النرجس", "count": 1},
+                {"region": "النرجس عمارات", "count": 1},
+                {"region": "جنوب الاكاديمية", "count": 1}
+            ],
+            "property_types": [
+                {"type": "For Sale", "count": 10}
+            ]
+        };
+        
+        logToPage('Script started');
+        logToPage('Test data loaded: ' + JSON.stringify(testData, null, 2));
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            logToPage('DOM loaded, creating charts...');
+            
+            try {
+                // Test Chart.js availability
+                logToPage('Chart.js available: ' + (typeof Chart !== 'undefined'));
+                
+                // Colors
+                const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'];
+                
+                // Regions Chart
+                logToPage('Creating regions chart...');
+                const regionsCtx = document.getElementById('regionsChart');
+                logToPage('Regions canvas element: ' + (regionsCtx ? 'found' : 'NOT FOUND'));
+                
+                if (regionsCtx && testData.regional_data) {
+                    const ctx = regionsCtx.getContext('2d');
+                    logToPage('Canvas context: ' + (ctx ? 'obtained' : 'FAILED'));
+                    
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: testData.regional_data.map(item => item.region),
+                            datasets: [{
+                                label: 'عدد العقارات',
+                                data: testData.regional_data.map(item => item.count),
+                                backgroundColor: colors.slice(0, testData.regional_data.length),
+                                borderWidth: 2,
+                                borderRadius: 5
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+                    logToPage('Regions chart created successfully!');
+                }
+                
+                // Property Types Chart
+                logToPage('Creating property types chart...');
+                const typesCtx = document.getElementById('typesChart');
+                logToPage('Types canvas element: ' + (typesCtx ? 'found' : 'NOT FOUND'));
+                
+                if (typesCtx && testData.property_types) {
+                    const ctx = typesCtx.getContext('2d');
+                    logToPage('Canvas context: ' + (ctx ? 'obtained' : 'FAILED'));
+                    
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: testData.property_types.map(item => item.type),
+                            datasets: [{
+                                data: testData.property_types.map(item => item.count),
+                                backgroundColor: colors.slice(0, testData.property_types.length),
+                                borderWidth: 3,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'bottom' }
+                            }
+                        }
+                    });
+                    logToPage('Types chart created successfully!');
+                }
+                
+                logToPage('All charts creation completed!');
+                
+            } catch (error) {
+                logToPage('ERROR: ' + error.message);
+                logToPage('ERROR Stack: ' + error.stack);
+            }
+        });
+        
+        // Log any JavaScript errors
+        window.onerror = function(msg, url, line, col, error) {
+            logToPage('JavaScript Error: ' + msg + ' at line ' + line);
+            return false;
+        };
+        
+        logToPage('Script setup completed');
+    </script>
+</body>
+</html>

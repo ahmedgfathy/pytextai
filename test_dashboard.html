@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .chart-container {
+            margin: 20px 0;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Dashboard</h1>
+        <p id="status">Loading...</p>
+        
+        <div class="chart-container">
+            <canvas id="testChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded');
+            document.getElementById('status').textContent = 'DOM Ready - Creating Chart...';
+            
+            // Test data
+            const testData = {
+                regional_data: [
+                    {region: 'ستيلا هايتس الساحل', count: 2283},
+                    {region: 'امواج', count: 1250},
+                    {region: 'بيت الوطن', count: 1060}
+                ]
+            };
+            
+            console.log('Test data:', testData);
+            
+            try {
+                const ctx = document.getElementById('testChart').getContext('2d');
+                console.log('Canvas context:', ctx);
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: testData.regional_data.map(item => item.region),
+                        datasets: [{
+                            label: 'عدد العقارات',
+                            data: testData.regional_data.map(item => item.count),
+                            backgroundColor: ['#667eea', '#764ba2', '#f093fb']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: true }
+                        }
+                    }
+                });
+                
+                document.getElementById('status').textContent = 'Chart Created Successfully!';
+                console.log('Chart created successfully');
+                
+            } catch (error) {
+                console.error('Error creating chart:', error);
+                document.getElementById('status').textContent = 'Error: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

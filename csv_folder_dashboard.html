@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحليل بيانات مجلد CSV</title>
+    <script src="chart.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            direction: rtl;
+            line-height: 1.6;
+        }
+        
+        .navbar {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .navbar .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .navbar h1 {
+            color: white;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .navbar .stats {
+            color: white;
+            font-size: 0.9rem;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .card .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-title {
+            color: #333;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .chart-canvas {
+            width: 100% !important;
+            max-height: 400px !important;
+        }
+        
+        .data-table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-top: 2rem;
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .search-box {
+            padding: 0.5rem 1rem;
+            border: 2px solid #eee;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            width: 300px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            position: sticky;
+            top: 0;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-indicator {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 0 1rem;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-box {
+                width: 100%;
+                margin-bottom: 1rem;
+            }
+            
+            .table-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1><i class="fas fa-chart-bar"></i> تحليل بيانات مجلد CSV</h1>
+            <div class="stats">
+                <i class="fas fa-database"></i> 18060 سجل
+                <i class="fas fa-file-excel" style="margin-right: 1rem;"></i> 5 ملف
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <div id="status" class="status-indicator">جاري تحميل البيانات...</div>
+        
+        <div class="summary-cards">
+            <div class="card">
+                <h3><i class="fas fa-database"></i> إجمالي السجلات</h3>
+                <div class="number">18,060</div>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-columns"></i> عدد الأعمدة</h3>
+                <div class="number">37</div>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-file-excel"></i> ملفات Excel</h3>
+                <div class="number">5</div>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-chart-pie"></i> المخططات</h3>
+                <div class="number">3</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title">توزيع البيانات حسب الملف</div>
+                <canvas id="files_chart" class="chart-canvas"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">أهم القيم في عمود: Property Name</div>
+                <canvas id="top_values_chart" class="chart-canvas"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">توزيع أنواع البيانات</div>
+                <canvas id="types_chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="data-table-container">
+            <div class="table-header">
+                <h2><i class="fas fa-table"></i> جدول البيانات (أول 100 سجل)</h2>
+                <input type="text" class="search-box" id="searchInput" placeholder="ابحث في البيانات...">
+            </div>
+            <div style="overflow-x: auto; max-height: 500px;">
+                <table class="data-table" id="dataTable">
+                    <thead>
+                        <tr><th>Property Name</th><th>Property Category</th><th>Regions</th><th>Floor No.	</th><th>Property Type</th><th>Building</th><th>Bedroom</th><th>Land-Garden	</th><th>Bathroom</th><th>Finished	</th><th>Update unit</th><th>Property Offered By	</th><th>Name	</th><th>Mobile No	</th><th>Tel</th><th>Unit Price</th><th>Payment Type	</th><th>Deposit	</th><th>Payment	</th><th>Paid Every	</th><th>A mount	</th><th>Description</th><th>Zain House Sales Notes	</th><th>Unnamed: 23</th><th>Unnamed: 24</th><th>Unnamed: 25</th><th>source_file</th><th>Property Number</th><th>Created Time</th><th>Modified Time</th><th>Last Modified By</th><th>Sales</th><th>Handler</th><th>Property Image</th><th>Unnamed: 30</th><th>Unnamed: 31</th><th>Unnamed: 32</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"><tr><td>ابو الهول1 شقة 120 متر رقم 79</td><td>شقق اهالي التجمع</td><td>ابو الهول</td><td>1</td><td>For Sale</td><td>120</td><td>2</td><td></td><td>1</td><td>Semi-Finished</td><td></td><td>Owner</td><td>وائل كمال</td><td>1001834520</td><td></td><td>750000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>قطعة 79 ش قريبة للتسعين تطل على حديقة اسانسير جراج الجراج خارج البيع
+60% الباقى على سنة</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ابو الهول1 شقة 125متر رقم 79 done</td><td>شقق اهالي التجمع</td><td>ابو الهول</td><td>1</td><td>For Sale</td><td>125</td><td>2</td><td></td><td>2</td><td>Semi-Finished</td><td></td><td>Owner</td><td>وائل كمال</td><td>1001834520</td><td></td><td>750000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>قطعة 79 ش ابو الهول 1 قريبة للتسعين تطل على حديقة اسانسير جراج الجراج خارج البيع
+غرفتين و2 تويلت و ريسيبشن
+50% والباقى على سنه</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقة 140متر قطعة107</td><td>شقق اهالي التجمع</td><td>الاندلس</td><td>1</td><td>For Sale</td><td>170</td><td>3</td><td></td><td>2</td><td>Semi-Finished</td><td></td><td>Owner</td><td>عيد قاعود</td><td>1000306580</td><td></td><td>1150000</td><td>Installment</td><td></td><td></td><td></td><td></td><td>امتداد الاندلس قطعه 107 مقدم والباقى 70% والباقى على سنة دور اول ثالث 3 غرف 2 حمام استلام فوري</td><td>شغالين في الكهربا حاليا
+منة نبيل</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Islam شقه بالهايد بارك 136م</td><td>شقق كمبوند التجمع</td><td>هايد بارك</td><td>1</td><td>For Sale</td><td>136</td><td>3</td><td></td><td>2</td><td>Semi-Finished</td><td>Not For Sale Now</td><td>Owner</td><td>محمد عرابي</td><td>1093335990</td><td></td><td>1600000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>دور اول كاش 3 غرفه 2 حمام استلام فورى شامل صاينه وتنازل</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>اللوتس10 شقة 200متر قطعة38 ماجل بيع Islam</td><td>شقق اهالي التجمع</td><td>اللوتس</td><td>2</td><td>For Sale</td><td>200</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>كمال</td><td>1025853777</td><td></td><td>1800000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>اللوتس 10 عماره 38</td><td>السعر نزل 1800000 
+omnia
+هيبعت الصور واتساب
+لو متشطبه نزود 400000
+و تستلم بعد 4 شهور
+امنيه</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>روف النرجس8 200 متر  قطعة 148</td><td>شقق اهالي التجمع</td><td>النرجس</td><td>Roof</td><td>For Sale</td><td>175</td><td>3</td><td>200</td><td>2</td><td>Finished</td><td></td><td>Owner</td><td>م/ محمد</td><td>1060470812</td><td></td><td>1500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>النرجس 8  قطعة 148نصف روف (3غرفة-3حمام-2رسيبشن) تشطيب 3/4 تشطيب سباكه كهرباء اسقف
+رووف 200 متر مبنى  175</td><td>تفاوض</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>النرجس عمارات شقة 225متر قطعة394 done</td><td>شقق اهالي التجمع</td><td>النرجس عمارات</td><td>4</td><td>For Sale</td><td>225</td><td>2</td><td></td><td>2</td><td>Semi-Finished</td><td></td><td>Owner</td><td>داليا</td><td>1122204432</td><td></td><td>2500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>النرجس عمارات دور رابع 225 متر 2غرف 1ماستر و ريسبشن 4 قطع 2حمام واجهتين  بحري  قطعه 394 فيها اسانسير فيو حديقه و غابه متحجره</td><td>ادهم ومروان</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>الياسمين1 روف 350 متر فيلا رقم 231 Noanswer</td><td>روف اهالي التجمع</td><td>الياسمين</td><td>Roof</td><td>For Sale</td><td>335</td><td>2</td><td></td><td>1</td><td>Semi-Finished</td><td></td><td>Owner</td><td>شريف</td><td>1001727753</td><td></td><td>1500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>الياسمين 1 فيلا رقم 231 استلام فورى ممكن تقسيمه لشقتين فى الروف 2 غرف حمام
+
+مش مقدم علي تصالح علشان مبني 25% فقط 
+
+السعر هينزل 50 ألف بكتيير وقت التخليص فقط</td><td>**Updated by Abdelhamid ** 28/3/2021</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>الياسمين 8 روف 425 متر فيلا رقم 351</td><td>شقق اهالي التجمع</td><td>الياسمين</td><td>Roof</td><td>For Sale</td><td>350</td><td>4</td><td>425</td><td>3</td><td>Finished</td><td></td><td>Owner</td><td>عبدالعليم</td><td>1025024422</td><td></td><td>3250000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>الياسمين 8 فيلا رقم 351 مباني 350 تشطيب كامل 4 نوم + ليفينج  + 3 حمام + ريسبشن 120م و تراس امامي 80 م  تليفون + غاز + عداد 3 فاز و غرفه غسيل</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقة250متر فيلا رقم243 Islam</td><td>شقق اهالي التجمع</td><td>جنوب الاكاديمية</td><td>1</td><td>For Sale</td><td>250</td><td>3</td><td></td><td>2</td><td>Semi-Finished</td><td>Updated</td><td></td><td>م محمد</td><td>1222348031</td><td></td><td>2500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>فيلا 243 ج 3 نوم و ليفينج 4 رسيبشن</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>دوبكس فيلا رقم 534 Islam</td><td>دوبلكس اهالي التجمع</td><td>جنوب الاكاديمية</td><td>Ground Floor</td><td>For Sale</td><td>480</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td>Not answer</td><td>Owner</td><td>محسن</td><td>1227460067</td><td>1015631406</td><td>4000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>جنوب الاكاديميه أ فيلا 534
+دوبلكس بيزمنت وارضى 
+الارضى 300 متر البيزمنت 200
+جنوب الاكاديمية أ</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>روف 150زيزنيا</td><td>روف اهالي التجمع</td><td>زيزنييا العائلي</td><td>Roof</td><td>For Sale</td><td>150</td><td></td><td></td><td></td><td>Semi-Finished</td><td></td><td></td><td>مصطفى</td><td>1009880430</td><td></td><td>1000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>مبانى 100متر بعداد الكهرباء
+قطعة64</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا مستقلة 710 مترمونتن فيو2 Islam</td><td>فيلات مستقله التجمع</td><td>ماونتن فيو 1$2</td><td>Villa</td><td>For Sale</td><td>710</td><td>5</td><td>510</td><td>5</td><td>Semi-Finished</td><td>Updated</td><td>Owner</td><td>عادل</td><td>1001727951</td><td></td><td>15000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>فيلا 104 مونتن فيو 2</td><td>رقم 104</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا مستقلة فى كمبوند طيبه</td><td>فيلات مستقله التجمع</td><td>طيبة</td><td>Villa</td><td>For Sale</td><td>390</td><td>more</td><td>528</td><td>5</td><td>Semi-Finished</td><td></td><td>Owner</td><td>احمد</td><td>1222192519</td><td></td><td>6500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>استلام فورى فيلا رقم 9 عليها مبلغ 240 الف تخصم من الاجمالى</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 168ىمتر فاملى سيتي</td><td>شقق كمبوند التجمع</td><td>فاميلي سيتي</td><td>3</td><td>For Sale</td><td>168</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>هاني سعد</td><td>1020308208</td><td></td><td>2430000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>الدور التالت بها حصه بالجراج لعربيتين و مخزن شامله قيمه الصيانه و النادي و ليس عليها اقساط و قيمه التنازل 5% من قيمه المبلغ الاصلي للشقه
+عمارة 43 الدور الثالث شقة 301 تطل على لاند سكيب</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 168 متر جرين سكوير</td><td>شقق كمبوند التجمع</td><td>جرين سكوير</td><td>3</td><td>For Sale</td><td>168</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>احمد هشام</td><td>1008485509</td><td></td><td>1300000</td><td>Installment</td><td>1070000</td><td>3 years & half</td><td>6 Months</td><td>51000</td><td>اقساط 51.000 كل 6 شهور لحد شهر 2021 __ اقساط شامله الوديعه والنادي __ فيو ناصيه شارع وكيرف وجنينه __ الدور التالت 
+
+ شامل النادى والصيانه والكميشن   s3-33 رقم
+
+ دور ثالث
+
+شقة 168 م بجرين اسكوير
+ استلام 2019 3 نوم 3 حمام مدفوع 1.070.000 باقي 230.000 بالجراج  دور 3 على ناصية</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه  لافنيير 131 متر Noanswer</td><td>شقق كمبوند التجمع</td><td>لافينير</td><td>1</td><td>For Sale</td><td>131</td><td>2</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>احمد عماد</td><td>1099909095</td><td></td><td>1000000</td><td>Installment</td><td>590000</td><td>5 years</td><td></td><td>450</td><td>الدور الاول السعر الاصلي 748.000 مدفوع 425 و مطلوب اوفر 250.000
+n19 -شقة 13
+متبقي اقساط :٣٢٥</td><td>نعرضها علي مليون ٥٠</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>بنت هاوس 260 متر جرين سكوير done</td><td>شقق كمبوند التجمع</td><td>جرين سكوير</td><td>Bent House</td><td>For Sale</td><td>260</td><td>4</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>مهندس احمد الغرباوى</td><td>1229125552</td><td></td><td>3000000</td><td>Installment</td><td></td><td>2 years & half</td><td>3 Months</td><td>38000</td><td>دوبلكس للبيع بكمباوند جرين سكوير .. صبور .. ٢٦٠ م٢ .. المرحلة الاولى ..  دور ثانى و ثالث و رووف .. السعر ١٦٥٠٠٠٠ جم (المقدم ٨٥٠٠٠٠ جم و الباقى اقساط ربع سنويه ٣٨٠٠٠ جم كل ثلاث شهور) .. يوجد ٢ دوبلكسين جنب بعض .. الشراء من المالك مباشره .. ممكن تبديل الدوبلكس بشاليه فى امواج بالساحل الشمالي او بياسيره بالسخنه
+السعر الاصلى مليون 50 الف</td><td>عليه 200الف على سنة مطلوب 3مليون</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 155 متر وان قطاميهdone</td><td>شقق كمبوند التجمع</td><td>وان قطاميه</td><td>6</td><td>For Sale</td><td>155</td><td>3</td><td></td><td>2</td><td>Semi-Finished</td><td></td><td>Owner</td><td>عمرو</td><td>1008996886</td><td></td><td>1600000</td><td>Installment</td><td>800000</td><td></td><td></td><td></td><td>على النادي الاجتماعي فيو مميز شامل كل شئ الدور الثامن استلام 9/2017
+تسليم شهر 1   دفع تنازل وصيانة 350000 
+اقساط  سبتمبر 2019</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Apt for sale in l vener160m Islam</td><td>شقق كمبوند التجمع</td><td>لافينير</td><td>1</td><td>For Sale</td><td>160</td><td>3</td><td></td><td>2</td><td>Semi-Finished</td><td></td><td>Owner</td><td>احمد ماهر</td><td>1005686719</td><td></td><td>1650000</td><td>Cash</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 160 متر لافنيير Noanswer</td><td>شقق كمبوند التجمع</td><td>لافينير</td><td>5</td><td>For Sale</td><td>160</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>هبة</td><td>1112824458</td><td>1090746364</td><td>1268000</td><td>Installment</td><td>697200</td><td></td><td></td><td></td><td>[ شقه للبيع بمشروع لافنيير ١٦٠ دور خامس
+N36-53 
+مدفوع ٢٠٣الف  
+و مدفوع ٢٤٤٢٠٠ من الاقساط
+ومدفوع اول قسط للنادي ٦٠٠٠
+ثمن الوحده من غير وديعه ونادي.    ١٠١٨٠٠٠
+باقي  ٥٧٠٨٠٠
+ودائعه صيانه  ١٠١٨٥٠
+نادي ٢٤٠٠٠
+السداد نصف سنوي 
+النادي يسدد ٦٠٠٠ كل سنه لمده اربع  سنين
+ الاقساط تدفع كل شهر ٤ و ١٠بقيمه ٨١٤٠٠ الف
+مصاريف التنازل
+اوفر ٢٥٠ الف</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 250 متر ميد تاونIslam</td><td>شقق كمبوند التجمع</td><td>ميد تاون</td><td>1</td><td>For Sale</td><td>250</td><td>4</td><td></td><td>3</td><td>Semi-Finished</td><td>Updated</td><td>Owner</td><td>جوزيف</td><td>1285554268</td><td></td><td>3000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>رقم العماره e17 
+الدور الاول
+فيو حمام سباحه
+السعر غير شامل العمولة</td><td>3000000 ج
+من غير عمولة ومن غير اي حاجة - صافي</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>بنت هاوس 285 متر ميد تاون whatsapp</td><td>شقق كمبوند التجمع</td><td>ميد تاون</td><td>Bent House</td><td>For Sale</td><td>285</td><td>4</td><td></td><td>4</td><td>Semi-Finished</td><td>Not answer</td><td>Owner</td><td>صابر محمد</td><td>966550570252</td><td></td><td>3770000</td><td>Installment</td><td>3281365</td><td>1 year</td><td>3 Months</td><td>85000</td><td>بنت هاوس 285 متر ميد تاون ومعاه مساحه خارجيه 100 متر
+رقم العماره B9
+شقه 302 
+موقع متميز متبقى ٥٩٤ الف على سنه ونصف
+ ٢٨٥ متر سعر المتر ١٢ الف بالاضافة الى سعر الرووف ١٠٠ متر في ٣،٥ الف
+ الاجمالي ٣،٧٧٠،٠٠٠ جنيه
+: بالاضافة الى ١٠٦،٢٢٥ جنيه وديعة صيانة سيتم دفعها بعد اربع ايّام
+: وباقي ٧ اقساط قيمة كل قسط ٨٤،٩٨٠ جنيه ابتداءا من اول ابريل ٢٠١٨ بقيمة اجمالية ٥٩٤،٨٦٠ جنيه
+يعني المطلوب لي في حال وجود زبون جاد ٣،٢٨١،٣٦٥ جنيه</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>بنت هاوس 265 متر لافنيير Islam</td><td>شقق كمبوند التجمع</td><td>لافينير</td><td>Bent House</td><td>For Sale</td><td>265</td><td>4</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>حامد عباس</td><td>1001730026</td><td></td><td>2500000</td><td>Cash</td><td></td><td></td><td></td><td>57000</td><td>دبلكس265 متتر علوي معاة مساحة خارجية 70 متر 
+كورنر 
+عمارة E17 وحدة رقم 8 
+مطلوب اجمالي ٢ مليون ٥٠٠ الف شامل تنازل وكومشن</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>بنت هاوس 265 متر لافنيير</td><td>شقق كمبوند التجمع</td><td>لافينير</td><td>Bent House</td><td>For Sale</td><td>265</td><td>4</td><td></td><td>4</td><td>Semi-Finished</td><td></td><td>Owner</td><td>اسامة صبيح</td><td>1000024167</td><td></td><td>2300000</td><td>Installment</td><td>1280000</td><td>5 years</td><td>3 Months</td><td>53000</td><td>دوبلكس بروف 100م  130 فوق و 130 تحت G-3 - 05 مطلوب اوفر 500,000  دافع 4 اقساط فقط الشقة 200 على 6 سنين و شهر 3  التنازل 10% النادي 40.000 
+
+السعر الاصلى مليون 600 الف 
+
+مدفوع للشركه 780 الف
+ومطلوب اوفر 500 الف
+
+2,080,000</td><td>تم تعديل السعر 2300000
+وفي انتظار الصور</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه لافنيير 131 متر دور خامس Islam</td><td>شقق كمبوند التجمع</td><td>لافينير</td><td>5</td><td>For Sale</td><td>131</td><td>2</td><td></td><td>2</td><td>Semi-Finished</td><td></td><td>Owner</td><td>راجى مجدى</td><td>1005535859</td><td></td><td>850000</td><td>Installment</td><td></td><td>1 year</td><td></td><td>24000</td><td>شقه عماره m28
+شقه 54ر
+الاوفر 250000
+ممكن تفاوض في السعر 
+باقي عليها 75000
+ودفعه صيانه 70000
+النادي مدفوع</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 148 متر دور ثالثdone</td><td>شقق كمبوند التجمع</td><td>كابيتال جاردنز بالم هيلز</td><td>3</td><td>For Sale</td><td>148</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>رانيا</td><td>1002803080</td><td></td><td>2250000</td><td>Installment</td><td>722000</td><td>6 years</td><td>3 Months</td><td>37000</td><td>ناصية بحرى على الكلاب هاوس
+المدفوع834الف
+صيانة 62 الف
+المتبقى 386500
+الاوفر 350الف</td><td>3اقساط على 3 سنوات 92 السنة 128 الصيانة مدفوعة</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 270 متر بالفدا Done</td><td>شقق كمبوند التجمع</td><td>الفدا</td><td>1</td><td>For Sale</td><td>270</td><td>4</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>محمد</td><td>1006609056</td><td>1111773773</td><td>2400000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>الشقة  الدورالاول بالكامل كل الاتجاهات 3 نوم 3 حمام ليفينج مطبخ ريسبشن كبير اسانسير جراج استلام فورى عداد كهرباء موجود فى غاز و عداد الكمبوند بين التسعين و الرحاب
+نصف تشطيب</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقة195متر عمارة46 done</td><td>شقق اهالي التجمع</td><td>المستثمريين</td><td>2</td><td>For Sale</td><td>195</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>هشام ابراهيم</td><td>1003529740</td><td></td><td>1800000</td><td></td><td></td><td></td><td></td><td></td><td>شقة 195 م للبيع بالستثمرين نصف تشطيب مربع 51 عمارة 46 الدور الثاني بحصة الجراج وعداد كهرباء
+قطعة اسكان  الجامعة الامريكية قريب من نادى الزهور منطقة كمبوندات</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقة200متر عمارة228 done</td><td>شقق اهالي التجمع</td><td>الاندلس</td><td>2</td><td>For Sale</td><td>200</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td></td><td>شريف عبد الله</td><td>1111880880</td><td></td><td>1500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>شقه الاندلس شرق القديم امام مونتن فيو 
+عماره رقم 228 
+الدور التانى واجهه ويوجد الدور الثالث  
+المتر 7500
+على سنتين</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>محل 40 م للبيع بكيرو بيزنيس جيت</td><td>محلات واداري</td><td>محلات</td><td>Ground Floor</td><td>For Sale</td><td>40</td><td></td><td>40</td><td></td><td>Semi-Finished</td><td></td><td>Owner</td><td>لواء يسري عبد المجيد</td><td>1284433990</td><td>1222162726</td><td>3750000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>محل 40م داخلي 50 خارجي بمول كايرو بيزنيس جيت خلف محلات قنديل بعد مونتن فيو نصف تشطيب والمساحة الخارجية متشطبة ومسموح بجميع الانشطة عدى صيدلية</td><td>حاليا متاجر لمدة 3 سنوات غير قابلة للتجديد
+16500 الف</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا 750 م للايجار بديار اركو</td><td>فيلات مستقله التجمع</td><td>ديار صبور</td><td>Villa</td><td>For Rent</td><td>750</td><td>6</td><td>450</td><td>6</td><td>Finished</td><td></td><td>Owner</td><td>ماجدة</td><td>1001111305</td><td></td><td>50000</td><td></td><td></td><td></td><td></td><td></td><td>ديارصبور فيلا d117 للايجار 750م مساحه ارض و 450م مباني تشطيب سوبر لوكس الدور الارضي ( ريسبشن + حمام + مطبخ+حمام للخادمه+ غرفه للخادمه ) الدور الاول ( 2غرفه ماستر + غرفه + حمام + ريسبشن) الدور التاني ( غرفه + حمام+ مطبخ ) الرووف 100م بها غرفه للسواق + الحمام + بها حمام خارجي بالحديقه للضيوف</td><td>متاجرةمش</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ستديو 53 م للبيع ببورتو نيو كايرو</td><td>شقق كمبوند التجمع</td><td>بورتو نيو كايرو</td><td>Ground Floor</td><td>For Rent</td><td>53</td><td>1</td><td>53</td><td>1</td><td>Finished</td><td></td><td>Owner</td><td>ماجدة</td><td>1001111305</td><td></td><td>0</td><td>Cash</td><td></td><td></td><td></td><td></td><td>ستديو 53 م ارضي بجنينة 25 م ببورتو نيو كايرو تشطيب كامل رقم d004</td><td>هيكون جاهز في شهر 9 
+حدد السعر حسب السوق</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا استيلا ديمارى السخنه 350 متر done</td><td>العين السخنة</td><td>ستيلا دي ماري السخنه</td><td>Villa</td><td>For Sale</td><td>350</td><td></td><td>250</td><td></td><td>Finished</td><td></td><td>Owner</td><td>هايدي</td><td>1001477601</td><td></td><td>5000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>فيلا مستقله 350 ارض 250 مبانى 
+فيو مميز جدا على البحر 
+تشطيب كامل هاى سوبر لوكس
+مطلوب 5 مليون كاش
+استلا ديمارى</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 168 متر جرين  سكوير دور تانىdone</td><td>شقق كمبوند التجمع</td><td>جرين سكوير</td><td>2</td><td>For Sale</td><td>168</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>عاصم</td><td>1006065281</td><td></td><td>1600000</td><td>Installment</td><td></td><td>4 years & half</td><td>6 Months</td><td>53000</td><td>شقه 168 متر رقم G 21
+دور تانى 
+النادي 25.000 الصيانه 35.000 دفعه التعاقد 5% دفعه الحجز الفعليه 10% مدفوع 3 اقساط استلام 2019 اخر قسط  2021باقي 8 اقساك</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Islam اى فيلا ميديل 305 م ماونتن فيو هايد بارك</td><td>شقق كمبوند التجمع</td><td>ماونتن فيو هايد بارك</td><td>2</td><td>For Sale</td><td>305</td><td>4</td><td></td><td>4</td><td>Semi-Finished</td><td>Not For Sale Now</td><td>Owner</td><td>علاء سالم</td><td>1222392978</td><td></td><td>2877660</td><td>Installment</td><td>2201840</td><td>1 year</td><td>3 Months</td><td>168955</td><td>ميديل السعر الاصلى  2,127.66  والوديعة 170165 مدفوع 1.451.840 مطلوب اوفر750 الف عماره 144 مرحله 10 مساحه خارجيه 89م I vella roof   مونتن فيو هايد بارك</td><td>حط الكومشن علي الأوفر
+مش عرف السعر الجديد كام</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 168 بجرين سكوير دور done</td><td>شقق كمبوند التجمع</td><td>جرين سكوير</td><td>4</td><td>For Sale</td><td>168</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>محمد نبيل</td><td>1222488554</td><td></td><td>1596000</td><td>Installment</td><td></td><td></td><td></td><td></td><td>الدور الرابع  شقه 168 متر بحري علي ناصيتين ا C02 - 43
+ شامل الصيانة والنادى
+عليها قسطين 
+واحد في شهر 30|5 ب56الف
+واحد8|2021 ب 38
+السعر شامل القسطين</td><td>طالب فى المتر 9500</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>منه شقه 185 متر سكوير دور ثالث</td><td>شقق كمبوند التجمع</td><td>سكوير</td><td>3</td><td>For Sale</td><td>185</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>رامي</td><td>1006360460</td><td>1223138353</td><td>1850000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>دور تالت 3 نوم 3 حمام ريسبشن 3 قطع  الكومبوند خلصان مطلوب كاش % 
+شقه رقم31  عمارة  10
+9200</td><td>سعر المتر 10الف 
+فيه 2 اسانسير في العماره</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 170 متر سكوير دور خامس</td><td>شقق كمبوند التجمع</td><td>سكوير</td><td>5</td><td>For Sale</td><td>170</td><td>3</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>معتز</td><td>1274754499</td><td></td><td>1530000</td><td>Cash</td><td></td><td>1 years & half</td><td>3 Months</td><td></td><td>دور اخير شقه 52 عماره q11
+استلام شهر 10</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>محل 45 للبيع ببورتو كايرو</td><td>محلات واداري</td><td>بورتو كايرو</td><td>1</td><td>For Sale</td><td>45</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>احمد محمود</td><td>1124144442</td><td></td><td>0</td><td>Cash</td><td></td><td></td><td></td><td></td><td>محل 45 للبيع بورتو كايرو الدور الاول جنب السينما على الممر ب 32000 للمتر قابل للتفاوض</td><td>حدد السعر</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>محل للايجار لايف مول بجوار نادي الزهور</td><td>محلات واداري</td><td>لايف مول</td><td>1</td><td>For Rent</td><td>35</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>امال</td><td>1005145164</td><td></td><td>10000</td><td></td><td></td><td></td><td></td><td></td><td>13000 بلايف مول بجوار نادي الزهورمحل 29م بالدور الارضي رقم 11 ب 15000ورقم 12 محل 37م ب17000 ومحل دور اول 36م</td><td>مش محددة سعر</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ابو الهول 1 شقة 220متر قطعة68</td><td>شقق اهالي التجمع</td><td>ابو الهول</td><td>Ground Floor</td><td>For Sale</td><td>220</td><td>3</td><td></td><td>2</td><td>Semi-Finished</td><td></td><td>Owner</td><td>محمد عبد العظيم</td><td>1007778750</td><td></td><td>1200000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>قطعة رقم 68 3 نوم 2 حمام ريسبشن 3 قطع و المطبخ 
+الدفع كاش استلام فوري</td><td>ارضى مرتفع</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>محل 40 م للبيع بميجا مول بمساحه خارجيه 50 م Done</td><td>محلات واداري</td><td>ميجا مول</td><td>Ground Floor</td><td>For Sale</td><td>40</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>شبل</td><td>1110504000</td><td></td><td>1350000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>محل على مدخل كارفور فى التجمع التالت - بميجا مول
+ووديعة صيانة 7%</td><td>يصلح اى شي ما عدى صيدلية</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>محل 31.5 م للبيغ بدانا مول done</td><td>محلات واداري</td><td>دانا مول</td><td>1</td><td>For Sale</td><td>31.5</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>محمد الشرنوبي</td><td>1224594401</td><td></td><td>12000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>محل 31.5 م للبيع بمول دانا امام الواجهة الدور الاول</td><td>بعد اولا د رجب</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>مبنى  460 م بجوار مستشفى تبارك</td><td>محلات واداري</td><td>مول تجاري</td><td>Villa</td><td>For Sale</td><td>460</td><td></td><td></td><td></td><td>Semi-Finished</td><td></td><td>Owner</td><td>طارق</td><td>1159111160</td><td></td><td>40000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>بجوار مستشفي تبارك سابع قطعة بعد البنزينة 460 م
+ويوجد 2 بدروم 
+مبنى  من 3 ادوار  ثلاث ادوار ترخيص تجاري والدور الاخير سكنى 
+ممكن يتباع كل دور لوحدة مساحة الدور 140 
+محور مصطفى كامل مركز خدمات التجمع</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>كيوسك 6 م للبيع بورتو كايرو تم تاجيل البيع</td><td>محلات واداري</td><td>بورتو كايرو</td><td>1</td><td>For Sale</td><td>6</td><td></td><td></td><td></td><td>Semi-Finished</td><td></td><td>Owner</td><td>مالك</td><td>1060041000</td><td></td><td>2250000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>بورتو كايرو الدور الاول بجوار السلم الكهربائي منطقه الذهب كيوسك 6 م  ب 1700000</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>محل 80 م جالريا مول للبيع Done</td><td>محلات واداري</td><td>جاليري مول</td><td>Ground Floor</td><td>For Sale</td><td>80</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>خالد</td><td>1005650205</td><td></td><td>8000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>دور ارضى امام تبارك ومخصص له مساحه خارجيه 65 متر المول جالريا مول 80 م</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>محل 150 م ميد تاون للبيع</td><td>محلات واداري</td><td>ميد تاون مول</td><td>Ground Floor</td><td>For Sale</td><td>150</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>هشام</td><td>1001105440</td><td></td><td>15000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>محل 150  متر بالدور الارضى  ومعاه مساحه خرجيه 80 متر مقدم 9 مليون والباقى على سنه ونص و تنازل 6 % يوجد محلين</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>مول تجاري 1300 م بالحي الثاني</td><td>محلات واداري</td><td>محلات</td><td></td><td>For Sale</td><td>1300</td><td></td><td></td><td></td><td>Semi-Finished</td><td></td><td>Owner</td><td>رامي</td><td>1000004093</td><td></td><td>13200000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>بالحى الثانى بيزمنت مطلوب 14000 للمتر استلام فورى مول تجاري 1300 م
+ممكن التجزئة</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>محل 30 م بورتو كايرو done</td><td>محلات واداري</td><td>بورتو كايرو</td><td>2</td><td>For Sale</td><td>30</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>علي</td><td>1005287372</td><td>1068947914</td><td>1350000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>الدور الثاتي بجانب الفود كورت  رقم 114 o خالص استلام فوري محل بورتو كايرو 30 م</td><td>مش هيتباع دلوقتي عشان في مشاكل في المول</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>استوديو 85 متر  هايد بارك Islam</td><td>شقق كمبوند التجمع</td><td>ماونتن فيو هايد بارك</td><td>3</td><td>For Sale</td><td>85</td><td>1</td><td></td><td>2</td><td>Semi-Finished</td><td>Not For Sale Now</td><td>Owner</td><td>مالك</td><td>1067771112</td><td></td><td>1250000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>استوديو 85 متر
+فيو  مول وارض فضى رسبشن قطعتين
+استلام فوري
+خالصة
+مطلوب 1,250,000 صافي بدون عمولة</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Islam اى فيلا روف 300 م ميديل ماونتن فيو هايدبارك</td><td>شقق كمبوند التجمع</td><td>ماونتن فيو هايد بارك</td><td>Bent House</td><td>For Sale</td><td>300</td><td>4</td><td></td><td>4</td><td>Semi-Finished</td><td>Not answer</td><td>Owner</td><td>وجدى</td><td>1067771112</td><td></td><td>4000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>اي فيلا A روف 300 متر  المرحلة التاسعة
+تطل علي الهايد بارك ڤيو البارك وقصور الهايد بارك امامها مباشرا السعر الاصلى 2 مليون 200 الف/"
+دا الفيو بتاعها من الدور التالت والرايع والروف
+ اي فيلا روف 300A ميدل +80 روف المرحلة التاسعة علي البارك مباشرا 
+33. 201 رقم الوحدة
+ مطاوب 4 مليون خالصة اقساط استلام فوري ومليش دعوي بعمولة المكتب</td><td>201
+FACE 9</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>عقار تجاري 3 ادوار 450 م بالبنفسج 1</td><td>محلات واداري</td><td>محلات</td><td></td><td>For Rent</td><td>450</td><td></td><td>200</td><td></td><td>Semi-Finished</td><td></td><td>Owner</td><td>طارق دياب</td><td>1003331986</td><td></td><td>0</td><td>Cash</td><td></td><td></td><td></td><td></td><td>عقار تجاري 3 ادوار البنفسج 1 امام بوابه 13 ارض 450 م مباني 300 م</td><td>ايجار
+خارج مصر حاليا</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>دوبلكس 314 م في الشروقdone</td><td>مناطق مختلفة</td><td>الشروق</td><td>Ground Floor</td><td>For Sale</td><td>314</td><td>3</td><td></td><td>2</td><td>Semi-Finished</td><td></td><td>Owner</td><td>زينب</td><td>1126778877</td><td></td><td>1400000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>شقه دوبلكس 314 م في الشروق 2 عباره عن بدروم و ارضي و جراش</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>محل 25 م بميجا مول</td><td>محلات واداري</td><td>ميجا مول</td><td>2</td><td>For Sale</td><td>25</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>ايمن</td><td>1143661050</td><td></td><td>600000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>25م الدور التاني ميجا مول تشطيب سوبر لوكس بالتكييف 3 وجهات سكوريت   شامل الصيانه و عقد نهائي من الشركه
+جمب الاسنسير 
+جمب مستشفى القاهرة الجديدة
+400,000
+ماعدا صيدلية</td><td>تم تعديل السعر 600000 ج
+بحصة في الارض</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا دوبلكس 530 م بنفسج 10 Islam</td><td>دوبلكس اهالي التجمع</td><td>البنفسج</td><td>Ground Floor</td><td>For Sale</td><td>530</td><td>4</td><td>530</td><td>5</td><td>Finished</td><td></td><td>Owner</td><td>احمد حسن</td><td>1004824831</td><td></td><td>4000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>بنفسج 10 فيلا 61 فيلا دوبلكس 530 م بيزمنت عالي وارضي 
+بيزمنت 300 م ارضي 230 م تشطيب هاي لوكس عفش كامل في الدور الارضي
+حديقة خاصة 250 م 
+دور ارضي يتكون من 3 نوم 2 حمام وريسبشن 4 قطعة وبار صغير
+بيزمنت ليفينج وواحدة نوم ماستر و 3 حمام ومطبخ كبير وريسبشن 4 قطعة 
+الفيلا واجهة بحري وجميع المساحات مثبتة بالغقد</td><td>متاجره دلوقتي</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا  هيكل جنوب الاكاديمية Worng Nubmer</td><td>اراضي وفيلات اهالي</td><td>جنوب الاكاديمية</td><td>Villa</td><td>For Sale</td><td>600</td><td></td><td>300</td><td></td><td>Semi-Finished</td><td>Updated</td><td>Owner</td><td>محمد السيد</td><td>1097142998</td><td></td><td>10500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>فيلا مجموعة أ 114 للبيع مساحة الارض 600 م المنطقة الاولى جنوب الاكاديمية
+بدروم وارضي واول وتاني وروف مع امكانية زيادة دور ثالث 
+الدور على 300 م شقة واحدة وقابل للتعديل على شقتين</td><td>السعر المطلوب لاعلى سعر</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا جولدن هايتس 2 370م</td><td>فيلات مستقله التجمع</td><td>جولدن هايتس</td><td>Villa</td><td>For Sale</td><td>379</td><td>5</td><td>370</td><td>5</td><td>Semi-Finished</td><td></td><td>Owner</td><td>محسن محمود محمد</td><td>1001610052</td><td></td><td>7000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>sb 3
+ثلاثة ادوار ارضي واول وروف مساحة المباني 358 م مساحة الارض 370 م مساحة الحديقة 120 م السعر 7000000 نصف تشطيب
+المالك مقيم في الخارج</td><td>قابل للتفاوض عند الجدية</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 165 م اللوتس الجنوبيه 7 عماره 27 Islam</td><td>شقق اهالي التجمع</td><td>اللوتس</td><td>1</td><td>For Sale</td><td>165</td><td>3</td><td></td><td>2</td><td>Semi-Finished</td><td></td><td>Owner</td><td>محمد</td><td>1223166602</td><td></td><td>7500</td><td>Installment</td><td></td><td>2 years</td><td>3 Months</td><td></td><td>شقق متكرر 165 متر خلفي استلام فوري 
+بتسهيلات علي سنتين  اللوتس 7 عماره 27</td><td>سعرها 7500 من سنتين دلوقتي سعر المتر 8000
+بيدفع 50% و الباقى على سنه و نص اقصى مده
+omnia</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا القطامية بالمز</td><td>فيلات مستقله التجمع</td><td>القطاميه بالمز</td><td>Villa</td><td>For Sale</td><td>640</td><td>5</td><td>650</td><td>5</td><td>Semi-Finished</td><td></td><td>Owner</td><td>اسامة</td><td>1003227279</td><td></td><td>10000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>بدروم وارضي واول وروف استلام فوري فيو بحيرة رقم الفيلا 26-27</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا اتوال دو فيل 700م</td><td>فيلات مستقله التجمع</td><td>اتوال دو فيل</td><td>Villa</td><td>For Sale</td><td>700</td><td>5</td><td>600</td><td>5</td><td>Finished</td><td></td><td>Owner</td><td>عمرو جودة</td><td>1006654521</td><td></td><td>13000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>بيزمنت وارضى واول وروف
+11 مليون كاش
+او 12 مليون تسهيلات
+متشطبه بحمام سباحه</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>452م PK2  فيلا بالم هيلز Islam</td><td>فيلات مستقله التجمع</td><td>بالم هيلز - PK2</td><td>Villa</td><td>For Sale</td><td>452</td><td>5</td><td>312</td><td>5</td><td>Semi-Finished</td><td>Not For Sale Now</td><td>Owner</td><td>شريف</td><td>1022015990</td><td>1223405658</td><td>8000000</td><td>Installment</td><td>5000000</td><td>6 years</td><td>6 Months</td><td>3000000</td><td>بالم هيلز القطاميه PK2 مقدم 600 +600 شهر 11+120 الف تنازل واوفر 3 مليون والباقي علي 6 سنوات
+المتبقى 3100000</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا اتوال دو فيل 650م تم التاجيل</td><td>فيلات مستقله التجمع</td><td>اتوال دو فيل</td><td>Villa</td><td>For Sale</td><td>640</td><td>6</td><td>750</td><td>6</td><td>Semi-Finished</td><td></td><td>Owner</td><td>اسامه</td><td>1221222260</td><td></td><td>7000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>عباره عن 3 فيلل جنب بعض26,27,28 تطل علي  البحيره وللاند سكيب استلام فوري</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>البنفسج8  شقة250 قطعة51</td><td>شقق اهالي التجمع</td><td>البنفسج</td><td>1</td><td>For Sale</td><td>250</td><td>4</td><td></td><td>3</td><td>Semi-Finished</td><td></td><td></td><td>تامر عمرو</td><td>1222179474</td><td></td><td>2500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>قطعة 151 التجمع الاول البنفسج 8 3حمام+3تراس
+4 غرف  
+3 بلكونة
+فيو حديقة</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>روف ٢٣٠ متر  الدوبلوماسيين done</td><td>روف اهالي التجمع</td><td>الدبلوماسيين</td><td>Roof</td><td>For Sale</td><td>230</td><td></td><td></td><td></td><td>Semi-Finished</td><td></td><td></td><td>احمد سعد</td><td>1119991220</td><td>1006363963</td><td>1400000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>قطعة 98
+45 تراس
+روف</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>روف340متر فيلا 459</td><td>شقق اهالي التجمع</td><td>النخيل</td><td>Roof</td><td>For Sale</td><td>340</td><td></td><td></td><td></td><td>Semi-Finished</td><td></td><td></td><td>اللواء ممدوح</td><td>1001426938</td><td></td><td>1300000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>النخيل 1 فيلا 459 غاز عزل رطوبة عزل حرارة  بعداد 4 غرف مقفولين السعر قابل للتفاوض مبنى 85م والباقى مساحة فاضية
+قانونى
+1,600,000</td><td>تم تعديل السعر 1300000 ج</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>البنفسج12 روف400متر فيلا 1 done</td><td>شقق اهالي التجمع</td><td>البنفسج</td><td>Roof</td><td>For Sale</td><td>250</td><td></td><td>400</td><td></td><td>Semi-Finished</td><td></td><td>Owner</td><td>محمد</td><td>1111444061</td><td></td><td>1800000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>روف للبيع بالبنفسج فيلات 12 فيلا رقم 1 
+مبنى به مكان للاسانسير</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا 800م القطاميه بالمز Islam</td><td>فيلات مستقله التجمع</td><td>القطاميه بالمز</td><td>Villa</td><td>For Sale</td><td>600</td><td>5</td><td>800</td><td>5</td><td>Semi-Finished</td><td></td><td>Owner</td><td>المالك</td><td>1000030474</td><td>1003227279</td><td>9500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>رقم القطعه 31 مساحه ارض 800م و مباني 600م بدرووم ارضي اول و رووف
+شامل كل حاجه وبالعموله</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا  1000م قطاميه ديونزاجل بيع</td><td>فيلات مستقله التجمع</td><td>قطامية ديونز</td><td>Villa</td><td>For Sale</td><td>750</td><td>5</td><td>1000</td><td>5</td><td>Semi-Finished</td><td></td><td>Owner</td><td>عاصم</td><td>1006065281</td><td></td><td>24000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>رقم القطعه 336 ناصيه 1000م ارض- 750مباني  شايفه الجولف من وجهتين ناصيه الفيلات و ارتفاعها 8 م اعلي من كل الفيلات مفيدا و نادي القاهره الجديده شامل صيانه</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا 1000م قطاميه ديونزdone</td><td>فيلات مستقله التجمع</td><td>قطامية ديونز</td><td>Villa</td><td>For Sale</td><td>1000</td><td>5</td><td>800</td><td>5</td><td>Semi-Finished</td><td></td><td>Owner</td><td>سيد</td><td>1001797773</td><td></td><td>17000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>فيلا ديونز 1000م ارض 200م مباني بدروم و ارضي و اول و تاني مدخل خاص خرسانه و طوب احمر  صف تاني متميز رقم القطعه 335</td><td>من غير الكوميشن</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا 800 متر جولدن هايتس Done</td><td>فيلات مستقله التجمع</td><td>جولدن هايتس</td><td>Villa</td><td>For Sale</td><td>430</td><td>more</td><td>800</td><td>more</td><td>Semi-Finished</td><td></td><td>Owner</td><td>علاء اسماعيل</td><td>1227666367</td><td></td><td>10000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>كمبوند جولدن هايتس 1 مساحه 800م مساحه الارض و 430 مساحه مباني ارضى و اول تطل علي لاند سكيب و بحيره استلام فورى السعر 10000000 كاش</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا 970 متر فاونتن بارك</td><td>فيلات مستقله التجمع</td><td>فاونتن بارك</td><td></td><td>For Sale</td><td>970</td><td>more</td><td>556</td><td>more</td><td>Semi-Finished</td><td></td><td>Owner</td><td>فاروق محمد</td><td>1223128000</td><td></td><td>12000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>فيلا فاونتن بارك رقم الوحده 27 مساحه ارض 970م و مساحه مباني 556م</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقه 101 متر الاشرفيه دور رابع Done</td><td>شقق كمبوند التجمع</td><td>الاشرفيه</td><td>4</td><td>For Sale</td><td>101</td><td>2</td><td></td><td>1</td><td>Semi-Finished</td><td></td><td>Owner</td><td>بييراميل</td><td>1006268953</td><td></td><td>950000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>الدور الرابع عماره 60 
+بدون اسانسير
+شامل السعر عداد الكهرباء والغاز و وديعه الصيانه و نقل الملكية</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>توين هاوس 270م فلوردوفيل</td><td>توين هاوس التجمع</td><td>فلور دو فيل</td><td>Villa</td><td>For Sale</td><td>270</td><td>4</td><td>220</td><td>4</td><td>Finished</td><td></td><td>Owner</td><td>كلور</td><td>1227636299</td><td></td><td>4500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>رقم 18 A فيو مميز على المفتاح</td><td>اجل بيع للصيف</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>توين هاوس 395م جاردن فيوNoanswer</td><td>توين هاوس التجمع</td><td>جاردن فيو</td><td>Villa</td><td>For Sale</td><td>395</td><td>5</td><td>605</td><td>5</td><td>Semi-Finished</td><td></td><td>Owner</td><td>مبروك عبد المقصود</td><td>1001210002</td><td></td><td>8000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>بيزمنت ارضي واول وروف فيو جاردن يوجد مكان لاسانسير منفصل رقم الفيلا 36</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>الرقم غير صحيح توين هاوس 206م ميفيدا</td><td>توين هاوس التجمع</td><td>ميفيدا</td><td></td><td>For Sale</td><td>206</td><td>3</td><td>175</td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>زياد</td><td>1000989844</td><td></td><td>4000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>بارسيل 2 وحدة 111 استلام فورى واجهة اندلسية كاش شامل الصيانة</td><td>مبيردش</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>تاون هاوس كورنر  370م جرين سكوير Islam</td><td>تاون هاوس التجمع</td><td>جرين سكوير</td><td>Villa</td><td>For Sale</td><td>270</td><td>3</td><td>370</td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>عاصم</td><td>1006065281</td><td></td><td>4500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>كورنر B46</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Islam تاون هاوس جرين سكوير ميديل 260م</td><td>تاون هاوس التجمع</td><td>جرين سكوير</td><td></td><td>For Sale</td><td>260</td><td>5</td><td>270</td><td>5</td><td>Semi-Finished</td><td>Updated</td><td>Owner</td><td>شهاب</td><td>1222123259</td><td></td><td>4500000</td><td>Installment</td><td></td><td>2 years & half</td><td>6 Months</td><td>166000</td><td>تاون هاوس ميديل رقم 140</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>مركز خدمة سيارات التجمع الخامس</td><td>اراضي وفيلات اهالي</td><td>المنطقة الصناعية</td><td>Land</td><td>For Sale</td><td>1210</td><td></td><td></td><td></td><td>Semi-Finished</td><td></td><td></td><td>نوره</td><td>1111186947</td><td>1005164941</td><td>31460000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>المركز الخدمه السيارات 1210م
+المتر 126الف
+تشطيب فندقي</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>دوبلكس 260 عمارات الجامعة الامريكية</td><td>دوبلكس اهالي التجمع</td><td>عمارات الجامعة الامريكية</td><td>Ground Floor</td><td>For Sale</td><td>260</td><td></td><td>130</td><td></td><td>Semi-Finished</td><td></td><td>Owner</td><td>تامر</td><td>1222100965</td><td></td><td>2250000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>مربع 51 اسكان الجامعه الامريكيه دوبلكي بيزمنت مع ارضي نصف تشطيب  عمارة 36
+حديقه 130متر</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقة 275 موينتن فيو هايدبارك Islam</td><td>شقق كمبوند التجمع</td><td>ماونتن فيو هايد بارك</td><td>3</td><td>For Sale</td><td>275</td><td></td><td></td><td></td><td>Semi-Finished</td><td>Not For Sale Now</td><td>Owner</td><td>شريف</td><td>1000100888</td><td></td><td>3250000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>شقة 275م في موينت فيو استلام فوري السعر شامل وديعة الصيانة والتنازل
+رقم المبنى170</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ارض بيت الوطن 672 مترdone</td><td>اراضي وفيلات اهالي</td><td>بيت الوطن</td><td>Land</td><td>For Sale</td><td>672</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>عادل بسطه</td><td>1222176369</td><td></td><td>3000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>مرحله تانيه تكميلي
+حي ثالث 
+قطعه 112 i
+باقى عليها 70 الف دولار</td><td>قابل للتفاوض لحد 2,800,000</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ارض بيت الوطن قرعه تكميليه 487 متر</td><td>اراضي وفيلات اهالي</td><td>بيت الوطن</td><td>Land</td><td>For Sale</td><td>487</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>عادل بسطه</td><td>1222176369</td><td></td><td>4100000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>قرعه تكميليه بيت الوطن
+قطعه 180 B
+ناصيه ممر نسبه التميز 12 % قابل للتفاوض</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ارض مول تجاري 5000 متر بالتجمع الاول اتبنت دلوقتى بيقولى حدد سعر</td><td>محلات واداري</td><td>مول تجاري</td><td></td><td>For Sale</td><td>5000</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>مالك</td><td>+96567730056</td><td></td><td>0</td><td>Cash</td><td></td><td></td><td></td><td></td><td>ارض محفوره تخصيص تجارى بها رخصه 2 بدروم وارضى واول وتانى وروف</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فلتين بالشروق بحمام سباحه Islam</td><td>مناطق مختلفة</td><td>الشروق</td><td>Villa</td><td>For Sale</td><td>1300</td><td>more</td><td>450</td><td>more</td><td>Finished</td><td></td><td>Owner</td><td>طارق</td><td>1011293444</td><td>1000223855</td><td>10000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>عندي فلتين توينز ..يطلوا على كمبوند الباتيو وكمبوند لافستا ..بالشروق
+على ثلاث نواصي وبواجهه طولها 47 متر - طراز كلاسيكي روماني
+واجهة قصور- حمام سباحة - صالة جيم والعاب - حدائق 1100 متر - جراج يسع 8 سيارات
+تبعد 20 متر عن 2 كمبوند فلل وتبعد 50 متر عن 2 مول تجاري ومجمع عيادات ومحطة total -المنطقه ساكنه وبها جميع المرافق والخدمات
+تصلح لسكن أسرتين أو عائله كبيره أو مستثمر أو شخصيه هامه ( كفيلا واحده)
+
+:٢صور الفلل من الداخل :
+
+
+ الدور الأرضي لفيلا A..ومساحته 200 متر وهو عباره عن :
+ريسبشن 5 قطع + مطبخ كبير + حمام للضيوف
+وله اطلاله على المسبح والحديقة. .وارتفاع السقف لهذا الدور 3.5 متر
+[٤:٢٢ م، ٢٠١٨/٥/٩] حازم: الدور الأرضي لفيلا B..ومساحته 200 متر وهو عباره عن :
+ريسبشن 5 قطع + مطبخ كبير + حمام للضيوف
+وله اطلاله على المسبح والحديقة. .وارتفاع السقف لهذا الدور 3.5 متر
+[ ملحوظه : يوجد على الواجهه 4 أبواب ( 2 باب كبير + 2 باب صغي
+ الأبواب الكبيره : عباره عن مدخل لكل فيلا 
+الأبواب الصغيره: عباره عن شباك طولي view لكل فيلا
+[٤اطلاله على حمام السباحة من ريسبشن فيلا
+[اطلاله على حمام السباحة من ريسبشن فيلا
+[ ويستخدم السلم الداخلي ( لكل فيلا ) للصعود إلى غرف النوم بالدور الأول
+[: الدور الاول لفيلا A ومساحته 220 متر ..عباره عن:
+4 غرف نوم ( منهم غرفه ماستر) + حمام رئيسي + ليفنج
+وارتفاع السقف لهذا الدور 3.20 متر
+واللي في الصوره (طرقة توزيع الغرف) وغرفة الماستر في آخر الطرقه ( في الوش)
+[ الدور الأول لفيلا B ومساحته 220 متر. .عباره عن :
+4 غرف نوم ( منهم غرفه ماستر) + حمام رئيسي + ليفنج
+وارتفاع السقف لهذا الدور 3.20 متر
+واللي في الصوره ( طرقه توزيع الغرف) وغرفة الماستر في آخر الطرقه ( في الوش)
+[ كراج يسع 8 سيارات وله بوابه مستقله على الشارع مباشرة ( لسهولة دخول وخروج السيارات
+بالنسبه لإجمالي اللاند سكيب 1100 متر عباره عن 
+700 متر حديقه للمداخل 
+400 متر حديقه بداخل الفيلاتم تسوير حديقة المداخل بسور شجر كثيف وتم عمل شبكة ري بها ،، وكذلك تم عمل ممرات المداخل بها ..على شكل حرف y بمعنى ..مدخل رئيسي للفلتين ..ثم ممر يمين ينتهي ببوابه حديد لفيلا A..وممر شمال ينتهي ببوابه حديد لفيلا B
+[ حديقه داخل الفيلا 400 متر ( جاري استكماله
+[السعر النهائي للفلتين 10.5 مليون جنيه</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>محلين 36 و 42 متر بورتو نيو كايرو</td><td>محلات واداري</td><td>بورتو نيو كايرو مول</td><td>Ground Floor</td><td>For Sale</td><td>43</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>مالك</td><td>+966555562222</td><td></td><td>1700000</td><td></td><td></td><td></td><td></td><td></td><td>محل رقم F96B
+مساحته 36 متر 
+مليون و955 الف 
+
+محل رقم G61A
+مساحته 42 متر مطلوب مليون و700 الف
+دور ارضى
+مطلوب 250 اوفر ققل شيئ 
+نبدا باوفر 300 الف</td><td>يباع المحلات بنفس السعر بدون اوفر
+والارضى ارخص من العلوي</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقة 208 المرام للايجار</td><td>شقق كمبوند التجمع</td><td>المرام</td><td>1</td><td>For Sale</td><td>208</td><td></td><td></td><td></td><td>Semi-Finished</td><td></td><td>Owner</td><td>محي</td><td>1000116690</td><td>+966508884591</td><td>0</td><td>Cash</td><td></td><td></td><td></td><td></td><td>شقة بالمرام لاند مارك 208م دور اول علوي
+للايجار</td><td>بدون جراج بالجراج 2200000</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>اجل بيع توين هاوس 400م مدينتى DONE</td><td>الرحاب و مدينتي</td><td>مدينتي</td><td></td><td>For Sale</td><td>400</td><td>4</td><td>289</td><td>4</td><td>Semi-Finished</td><td></td><td>Owner</td><td>مدام شريف</td><td>1001401181</td><td></td><td>5000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>توين أرضي واول وروف تقسيط علي 5 سنوات رقم 50/1 نموذج u</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>كامل التشطيب تاون هاوس كورنر 200م فلور دوفيلDINE</td><td>تاون هاوس التجمع</td><td>فلور دو فيل</td><td></td><td>For Sale</td><td>200</td><td>4</td><td>240</td><td>4</td><td>Finished</td><td></td><td>Owner</td><td>وليد</td><td>1001292292</td><td></td><td>4250000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>فيلا 24D كورنر ارضى و اول و تانى سوبر لوكس - ناصية ممر
+نهائي 4200000</td><td>هو موجود بس بعد اسبوع السعر لانه ىبره مصر</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Noanswer مأجل بيعه للسنه  الجايه تاون ميديل لافنيير 290 متر</td><td>تاون هاوس التجمع</td><td>لافينير</td><td>Villa</td><td>For Sale</td><td>290</td><td>4</td><td>260</td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>شريف</td><td>1111111243</td><td></td><td>2500000</td><td>Installment</td><td>200000</td><td></td><td></td><td></td><td>ميدل مرحلة اولى A92    خمس غرف 4 تحت و واحدة فى الروف
+باقى 500 الف 
+ السعر غير شامل الاتنازل والصيانة</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>تاون هاوس ميديل 270 متر جرين سكوير Islam</td><td>تاون هاوس التجمع</td><td>جرين سكوير</td><td>Villa</td><td>For Sale</td><td>270</td><td>4</td><td>270</td><td>3</td><td>Semi-Finished</td><td></td><td>Owner</td><td>اشرف</td><td>1114266666</td><td></td><td>3000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>ميدل استلام 2019  
+تاون هاوس ميديل 270 متر جرين سكوير
+B43
+مطلوب ٣ مليون</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقة 202م كابيتال جاردنز دور اول بالم هيلز</td><td>شقق كمبوند التجمع</td><td>كابيتال جاردنز بالم هيلز</td><td>1</td><td>For Sale</td><td>202</td><td>3</td><td></td><td>4</td><td>Semi-Finished</td><td></td><td>Owner</td><td>يحيي</td><td>1005286475</td><td></td><td>1900000</td><td>Installment</td><td>860000</td><td>6 years</td><td>6 Months</td><td></td><td>شقة 202م في كابيتل جاردنز دور اول 3 غرف ماستر + حمام ضيوف استلام 12/2019 واقساط لحد july 2023
+شقه بالم هيلز كابيتال جاردنز - 202متر المرحله الاولي- الدور الاول 
+المتبقي 1.040.000حتي 2023  تسليم 2019 ديسمبر- تنازل %5</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ارض باللوتس الجديد قطعه 249 Done</td><td>اراضي وفيلات اهالي</td><td>اللوتس</td><td></td><td>For Sale</td><td>663</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>رضا</td><td>1001350658</td><td></td><td>0</td><td>Cash</td><td></td><td></td><td></td><td></td><td>قطعه 249
+مساحه 663</td><td>نشوف السعر احنا</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ارض باللوتس الجديد قطعه 167 Done</td><td>اراضي وفيلات اهالي</td><td>اللوتس</td><td></td><td>For Sale</td><td>530</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>رضا</td><td>1001350658</td><td></td><td>0</td><td>Cash</td><td></td><td></td><td></td><td></td><td>قطعه 167 
+مساحه 530</td><td>نشوف السعر احنا</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ارض 518 متر اللوتس الجديد رقم 166done</td><td>اراضي وفيلات اهالي</td><td>اللوتس</td><td>Land</td><td>For Sale</td><td>518</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>مجدى</td><td>1009004981</td><td></td><td>8500000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>ارض باللوتس الجديد قطعه 166</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>صنع 300 متر رخام رقم ٥٢٥ للايجار</td><td>اراضي وفيلات اهالي</td><td>المنطقة الصناعية</td><td></td><td>For Rent</td><td>300</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>محمد جاد</td><td>1065860702</td><td></td><td>20000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>قطعه رقم ٥٢٥ 
+مبنيه بدروم وارضى  تشطيب كامل 
+تخصيص رخام</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>مصنع 300 متر غذائي رقم ٥٢٥</td><td>محلات واداري</td><td>المنطقة الصناعية</td><td>1</td><td>For Rent</td><td>300</td><td></td><td></td><td></td><td>Finished</td><td></td><td>Owner</td><td>محمد جاد</td><td>1065860702</td><td></td><td>20000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>قطعه رقم ٥٢٥
+مبنيه بدروم وارضى واول تشطيب كامل 
+تخصيص غذائى</td><td>ايجار20000</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>مصنع 1250 متر نجاره رقم 87 مغلق</td><td>اراضي وفيلات اهالي</td><td>المنطقة الصناعية</td><td></td><td>For Sale</td><td>1250</td><td></td><td></td><td></td><td>Semi-Finished</td><td></td><td>Owner</td><td>محمد</td><td>1090019174</td><td></td><td>9000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>تخصيص اخشاب مبنى بدروم ارضى واول قطعه 87</td><td>مغلق امنيه</td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>شقة300متر قطعة45</td><td>شقق اهالي التجمع</td><td>امتداد غرب الجولف</td><td>2</td><td>For Sale</td><td>300</td><td></td><td></td><td></td><td>Semi-Finished</td><td></td><td>Owner</td><td>كريم</td><td>1002111772</td><td></td><td>4000000</td><td>Installment</td><td>2000000</td><td>1 year</td><td></td><td></td><td>العمارة هيكل خرسانى 
+ قطعة45 مربع 4 مقدم 50%والباقى عند الاستلام</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>فيلا 260م الستثمرين الجنوبيةdone</td><td>اراضي وفيلات اهالي</td><td>المستثمريين</td><td>Villa</td><td>For Sale</td><td>160</td><td></td><td>260</td><td></td><td>Semi-Finished</td><td></td><td>Owner</td><td>عمرو</td><td>1222152528</td><td></td><td>10000000</td><td>Cash</td><td></td><td></td><td></td><td></td><td>عماره ج1 رقم 111 اسكان عائلي مساحه ارض 260م و مباني 160م دور اول و تاني و تالت و روف و بدروم و مساحه الروف 40 م بها كهرباء+ مياه 6.000.000 كاش
+متشطبه بكامل و متاجر كل الشقق
+25الف في الشهر</td><td></td><td></td><td></td><td></td><td>10-Properties.xlsx</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        
+        function updateStatus(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            statusDiv.innerHTML += timestamp + ': ' + message + '\n';
+            console.log(message);
+        }
+        
+        updateStatus('تم تحميل الصفحة');
+        updateStatus('Chart.js متاح: ' + (typeof Chart !== 'undefined'));
+        
+        // Chart data from Python analysis
+        const chartsData = {
+    "files_chart": {
+        "labels": [
+            "10-Properties.xlsx",
+            "Properties_Repair.xlsx",
+            "Properties (2)_Repair.xlsx",
+            "Properties (3).xlsx",
+            "Properties(1)_Repair.xlsx"
+        ],
+        "data": [
+            3818,
+            3558,
+            3558,
+            3558,
+            3568
+        ],
+        "title": "توزيع البيانات حسب الملف",
+        "colors": [
+            "#667eea",
+            "#764ba2",
+            "#f093fb",
+            "#f5576c",
+            "#4facfe"
+        ]
+    },
+    "top_values_chart": {
+        "labels": [
+            "قطعه ارض بالحي السادس 600متر",
+            "قطعة ارض ببيت الوطن Done",
+            "قطعه ارض بالحي السادس 630متر",
+            "تاون هاوس مفيدا",
+            "فيلا مستقله 331م ميفيدا",
+            "فيلا مستقله 391م ميفيدا",
+            "قطعه ارض بالحي السادس 700متر",
+            "شاليه 90م دور تاني بالروف ميني ايجبت السخنة",
+            "عماره 86 شاليه 19",
+            "شاليه بستيلا مارينا العلمين 120م ارضي ب2 جاردن"
+        ],
+        "data": [
+            55,
+            20,
+            15,
+            15,
+            15,
+            15,
+            15,
+            10,
+            10,
+            10
+        ],
+        "title": "أهم القيم في عمود: Property Name",
+        "colors": [
+            "#ff6b6b",
+            "#4ecdc4",
+            "#45b7d1",
+            "#96ceb4",
+            "#ffeaa7",
+            "#dda0dd",
+            "#98d8c8",
+            "#f7dc6f",
+            "#bb8fce",
+            "#85c1e9"
+        ]
+    },
+    "types_chart": {
+        "labels": [
+            "object"
+        ],
+        "data": [
+            10
+        ],
+        "title": "توزيع أنواع البيانات",
+        "colors": [
+            "#667eea",
+            "#764ba2",
+            "#f093fb",
+            "#f5576c"
+        ]
+    }
+};
+        
+        updateStatus('تم تحميل بيانات المخططات: ' + Object.keys(chartsData).length + ' مخطط');
+        
+        // Chart configurations
+        const chartConfigs = {
+            bar: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { 
+                        titleFont: { size: 14 },
+                        bodyFont: { size: 12 }
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        ticks: { font: { size: 11 } }
+                    },
+                    x: { 
+                        ticks: { 
+                            font: { size: 10 },
+                            maxRotation: 45
+                        }
+                    }
+                }
+            },
+            doughnut: {
+                responsive: true,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { font: { size: 11 } }
+                    },
+                    tooltip: { 
+                        titleFont: { size: 14 },
+                        bodyFont: { size: 12 }
+                    }
+                }
+            },
+            pie: {
+                responsive: true,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { font: { size: 11 } }
+                    },
+                    tooltip: { 
+                        titleFont: { size: 14 },
+                        bodyFont: { size: 12 }
+                    }
+                }
+            }
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('تم تحميل DOM');
+            
+            try {
+                if (typeof Chart === 'undefined') {
+                    updateStatus('خطأ: Chart.js غير محمل!');
+                    return;
+                }
+                
+                const chartTypes = ['bar', 'doughnut', 'pie'];
+                let chartIndex = 0;
+                
+                for (const [chartKey, chartData] of Object.entries(chartsData)) {
+                    const canvas = document.getElementById(chartKey);
+                    if (!canvas) {
+                        updateStatus('تحذير: لم يتم العثور على canvas للمخطط: ' + chartKey);
+                        continue;
+                    }
+                    
+                    const chartType = chartTypes[chartIndex % chartTypes.length];
+                    chartIndex++;
+                    
+                    const ctx = canvas.getContext('2d');
+                    
+                    new Chart(ctx, {
+                        type: chartType,
+                        data: {
+                            labels: chartData.labels,
+                            datasets: [{
+                                label: chartData.title,
+                                data: chartData.data,
+                                backgroundColor: chartData.colors.slice(0, chartData.data.length),
+                                borderWidth: 2,
+                                borderRadius: chartType === 'bar' ? 5 : 0
+                            }]
+                        },
+                        options: chartConfigs[chartType]
+                    });
+                    
+                    updateStatus('تم إنشاء مخطط: ' + chartKey + ' (' + chartType + ')');
+                }
+                
+                updateStatus('✅ تم إنشاء جميع المخططات بنجاح!');
+                
+            } catch (error) {
+                updateStatus('❌ خطأ: ' + error.message);
+                updateStatus('Stack: ' + error.stack);
+            }
+            
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            const tableBody = document.getElementById('tableBody');
+            const originalRows = Array.from(tableBody.getElementsByTagName('tr'));
+            
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                originalRows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+            
+            updateStatus('تم تفعيل وظيفة البحث');
+        });
+        
+        // Catch any global errors
+        window.onerror = function(msg, url, line, col, error) {
+            updateStatus('❌ خطأ عام: ' + msg + ' في السطر ' + line);
+            return false;
+        };
+        
+        updateStatus('تم الانتهاء من الإعداد');
+    </script>
+</body>
+</html>

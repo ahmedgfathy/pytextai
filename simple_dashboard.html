@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحليل العقارات البسيطة</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #667eea;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+        
+        .chart-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #eee;
+        }
+        
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #333;
+        }
+        
+        #status {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 1px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 لوحة تحليل العقارات</h1>
+            <p>تحليل شامل لبيانات العقارات من ملفات Excel</p>
+        </div>
+        
+        <div id="status">جاري التحميل...</div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">18,060</div>
+                <div class="stat-label">إجمالي العقارات</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">274</div>
+                <div class="stat-label">المناطق المختلفة</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">25</div>
+                <div class="stat-label">فئات العقارات</div>
+            </div>
+        </div>
+        
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title">توزيع العقارات حسب المنطقة</div>
+                <canvas id="regionsChart" style="max-height: 300px;"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">أنواع العقارات</div>
+                <canvas id="typesChart" style="max-height: 300px;"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">فئات العقارات</div>
+                <canvas id="categoriesChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data from Python analysis
+        const analysisData = {
+  "summary": {
+    "total_properties": 18060,
+    "unique_regions": 274,
+    "unique_categories": 25,
+    "analysis_date": "2025-07-26 07:59:34"
+  },
+  "regional_data": [
+    {
+      "region": "ستيلا هايتس الساحل",
+      "count": 2283
+    },
+    {
+      "region": "امواج",
+      "count": 1250
+    },
+    {
+      "region": "بيت الوطن",
+      "count": 1060
+    },
+    {
+      "region": "لاسرينا الساحل",
+      "count": 596
+    },
+    {
+      "region": "ميفيدا",
+      "count": 541
+    },
+    {
+      "region": "اكتوبر",
+      "count": 442
+    },
+    {
+      "region": "هايد بارك",
+      "count": 421
+    },
+    {
+      "region": "اللوتس",
+      "count": 356
+    },
+    {
+      "region": "الاندلس",
+      "count": 345
+    },
+    {
+      "region": "بورتو نيو كايرو مول",
+      "count": 340
+    }
+  ],
+  "property_types": [
+    {
+      "type": "For Sale",
+      "count": 15921
+    },
+    {
+      "type": "For Rent",
+      "count": 1844
+    },
+    {
+      "type": "غير محدد",
+      "count": 295
+    }
+  ],
+  "categories": [
+    {
+      "category": "الساحل الشمالي",
+      "count": 6243
+    },
+    {
+      "category": "اراضي وفيلات اهالي",
+      "count": 1872
+    },
+    {
+      "category": "شقق كمبوند",
+      "count": 1580
+    },
+    {
+      "category": "العين السخنة",
+      "count": 1263
+    },
+    {
+      "category": "شقق اهالي",
+      "count": 1220
+    },
+    {
+      "category": "فيلات مستقلة",
+      "count": 876
+    },
+    {
+      "category": "محلات واداري",
+      "count": 841
+    },
+    {
+      "category": "مناطق مختلفة",
+      "count": 780
+    },
+    {
+      "category": "دوبلكس اهالي",
+      "count": 436
+    },
+    {
+      "category": "شقق كمبوند التجمع",
+      "count": 414
+    }
+  ]
+};
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded - creating charts...');
+            console.log('Analysis data:', analysisData);
+            
+            document.getElementById('status').textContent = 'تم تحميل البيانات بنجاح - جاري إنشاء الرسوم البيانية...';
+            
+            // Colors palette
+            const colors = [
+                '#667eea', '#764ba2', '#f093fb', '#f5576c',
+                '#4facfe', '#00f2fe', '#43e97b', '#38f9d7',
+                '#ffecd2', '#fcb69f', '#a8edea', '#fed6e3'
+            ];
+            
+            try {
+                // Regions Chart
+                if (analysisData.regional_data && analysisData.regional_data.length > 0) {
+                    console.log('Creating regions chart...');
+                    const regionsCtx = document.getElementById('regionsChart').getContext('2d');
+                    new Chart(regionsCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: analysisData.regional_data.map(item => item.region),
+                            datasets: [{
+                                label: 'عدد العقارات',
+                                data: analysisData.regional_data.map(item => item.count),
+                                backgroundColor: colors.slice(0, analysisData.regional_data.length),
+                                borderWidth: 2,
+                                borderRadius: 5
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                    console.log('Regions chart created');
+                } else {
+                    console.log('No regional data available');
+                }
+                
+                // Property Types Chart
+                if (analysisData.property_types && analysisData.property_types.length > 0) {
+                    console.log('Creating types chart...');
+                    const typesCtx = document.getElementById('typesChart').getContext('2d');
+                    new Chart(typesCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: analysisData.property_types.map(item => item.type),
+                            datasets: [{
+                                data: analysisData.property_types.map(item => item.count),
+                                backgroundColor: colors.slice(0, analysisData.property_types.length),
+                                borderWidth: 3,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'bottom' }
+                            }
+                        }
+                    });
+                    console.log('Types chart created');
+                } else {
+                    console.log('No property types data available');
+                }
+                
+                // Categories Chart
+                if (analysisData.categories && analysisData.categories.length > 0) {
+                    console.log('Creating categories chart...');
+                    const categoriesCtx = document.getElementById('categoriesChart').getContext('2d');
+                    new Chart(categoriesCtx, {
+                        type: 'pie',
+                        data: {
+                            labels: analysisData.categories.map(item => item.category),
+                            datasets: [{
+                                data: analysisData.categories.map(item => item.count),
+                                backgroundColor: colors
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'right' }
+                            }
+                        }
+                    });
+                    console.log('Categories chart created');
+                } else {
+                    console.log('No categories data available');
+                }
+                
+                document.getElementById('status').textContent = '✅ تم إنشاء جميع الرسوم البيانية بنجاح!';
+                
+            } catch (error) {
+                console.error('Error creating charts:', error);
+                document.getElementById('status').textContent = 'خطأ في إنشاء الرسوم البيانية: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

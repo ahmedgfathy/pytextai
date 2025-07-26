@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏢 CSVs Real Estate Data Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .data-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .data-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .table-row:hover {
+            background: linear-gradient(90deg, #f8fafc 0%, #e2e8f0 100%);
+            transform: scale(1.02);
+            transition: all 0.2s ease;
+        }
+        
+        .property-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: inline-block;
+        }
+        
+        .property-شقة { background: linear-gradient(135deg, #3b82f6, #1e40af); color: white; }
+        .property-فيلا { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .property-أرض { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+        .property-محل { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; }
+        .property-مكتب { background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; }
+        .property-مخزن { background: linear-gradient(135deg, #6b7280, #4b5563); color: white; }
+        
+        .status-للبيع { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+        .status-للإيجار { background: linear-gradient(135deg, #3b82f6, #1e40af); color: white; }
+        .status-متاح { background: linear-gradient(135deg, #84cc16, #65a30d); color: white; }
+        .status-محجوز { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .status-تم { background: linear-gradient(135deg, #6b7280, #4b5563); color: white; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background: white;
+            margin: 2% auto;
+            padding: 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            overflow-y: auto;
+            direction: rtl;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .search-highlight {
+            background: linear-gradient(135deg, #fef08a, #facc15);
+            font-weight: 600;
+            border-radius: 4px;
+            padding: 0 4px;
+        }
+        
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn-view {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            color: white;
+        }
+        
+        .btn-view:hover {
+            background: linear-gradient(135deg, #1e40af, #1e3a8a);
+            transform: scale(1.05);
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="glass-card mx-4 mt-4 p-6">
+        <div class="text-center">
+            <h1 class="text-4xl font-bold text-white mb-2">🏢 لوحة تحكم العقارات</h1>
+            <p class="text-white/80 text-lg">تحليل بيانات العقارات من ملفات Excel</p>
+            <div class="mt-4 text-white/70">
+                <span class="bg-white/20 px-4 py-2 rounded-full">آخر تحديث: 2025-07-26 07:31</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Statistics Cards -->
+    <div class="container mx-auto px-4 py-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <div class="stat-card">
+                <div class="text-3xl font-bold">44</div>
+                <div class="text-sm opacity-90">إجمالي العقارات</div>
+            </div>
+            <div class="stat-card">
+                <div class="text-3xl font-bold">10</div>
+                <div class="text-sm opacity-90">للبيع</div>
+            </div>
+            <div class="stat-card">
+                <div class="text-3xl font-bold">6</div>
+                <div class="text-sm opacity-90">للإيجار</div>
+            </div>
+            <div class="stat-card">
+                <div class="text-3xl font-bold">5</div>
+                <div class="text-sm opacity-90">ملفات Excel</div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="chart-container">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800">توزيع أنواع العقارات</h3>
+                <canvas id="propertyTypeChart" width="400" height="200"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800">حالة العقارات</h3>
+                <canvas id="statusChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="data-card p-6 mb-6">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">🔍 البحث والمرشحات</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-700">البحث العام</label>
+                    <input type="text" id="searchInput" placeholder="ابحث في جميع البيانات..." 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-700">نوع العقار</label>
+                    <select id="propertyTypeFilter" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">جميع الأنواع</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-700">الحالة</label>
+                    <select id="statusFilter" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">جميع الحالات</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="clearFilters()" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200">
+                        مسح المرشحات
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="data-card overflow-hidden">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-800">📋 بيانات العقارات</h3>
+                <p class="text-gray-600 text-sm mt-1" id="recordsCount">عرض 44 عقار</p>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المعرف</th>
+                            <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">نوع العقار</th>
+                            <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الموقع</th>
+                            <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المساحة</th>
+                            <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">السعر</th>
+                            <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الحالة</th>
+                            <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">التواصل</th>
+                            <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    <button onclick="previousPage()" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        السابق
+                    </button>
+                    <button onclick="nextPage()" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        التالي
+                    </button>
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700" id="paginationInfo">
+                            عرض النتائج
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                            <button onclick="previousPage()" class="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-all duration-200">
+                                السابق
+                            </button>
+                            <button onclick="nextPage()" class="ml-3 relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-all duration-200">
+                                التالي
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for viewing details -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">تفاصيل العقار</h2>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-3xl font-bold">&times;</button>
+            </div>
+            <div id="modalContent">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data
+        let currentData = [{"unique_id": "CSV001", "file_source": "csvs/10-Properties.xlsx", "sheet_name": "Sheet1", "row_number": 2, "property_type": "شقة", "location": "التجمع الخامس", "area": "86", "price": "1356716", "contact": "01000001368", "status": "للبيع", "description": "شقة للبيع في التجمع الخامس مساحة 86 متر", "raw_data": "{\"نوع_العقار\": \"شقة\", \"المنطقة\": \"التجمع الخامس\", \"المساحة\": \"86 متر\", \"السعر\": \"1356716 جنيه\", \"الهاتف\": \"01000001368\", \"الحالة\": \"للبيع\", \"ملاحظات\": \"عقار من ملف 10-Properties.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 813148, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV002", "file_source": "csvs/10-Properties.xlsx", "sheet_name": "Sheet2", "row_number": 3, "property_type": "عمارة", "location": "الشروق", "area": "160", "price": "602863", "contact": "01000004524", "status": "تم البيع", "description": "عمارة تم البيع في الشروق مساحة 160 متر", "raw_data": "{\"نوع_العقار\": \"عمارة\", \"المنطقة\": \"الشروق\", \"المساحة\": \"160 متر\", \"السعر\": \"602863 جنيه\", \"الهاتف\": \"01000004524\", \"الحالة\": \"تم البيع\", \"ملاحظات\": \"عقار من ملف 10-Properties.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 813148, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV003", "file_source": "csvs/10-Properties.xlsx", "sheet_name": "Sheet3", "row_number": 4, "property_type": "محل تجاري", "location": "الشروق", "area": "53", "price": "930950", "contact": "01000005247", "status": "تم البيع", "description": "محل تجاري تم البيع في الشروق مساحة 53 متر", "raw_data": "{\"نوع_العقار\": \"محل تجاري\", \"المنطقة\": \"الشروق\", \"المساحة\": \"53 متر\", \"السعر\": \"930950 جنيه\", \"الهاتف\": \"01000005247\", \"الحالة\": \"تم البيع\", \"ملاحظات\": \"عقار من ملف 10-Properties.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 813148, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV004", "file_source": "csvs/10-Properties.xlsx", "sheet_name": "Sheet1", "row_number": 5, "property_type": "بيت", "location": "الزمالك", "area": "195", "price": "1253973", "contact": "01000006310", "status": "محجوز", "description": "بيت محجوز في الزمالك مساحة 195 متر", "raw_data": "{\"نوع_العقار\": \"بيت\", \"المنطقة\": \"الزمالك\", \"المساحة\": \"195 متر\", \"السعر\": \"1253973 جنيه\", \"الهاتف\": \"01000006310\", \"الحالة\": \"محجوز\", \"ملاحظات\": \"عقار من ملف 10-Properties.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 813148, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV005", "file_source": "csvs/10-Properties.xlsx", "sheet_name": "Sheet2", "row_number": 6, "property_type": "بيت", "location": "الحي 16", "area": "74", "price": "930661", "contact": "01000002963", "status": "تم البيع", "description": "بيت تم البيع في الحي 16 مساحة 74 متر", "raw_data": "{\"نوع_العقار\": \"بيت\", \"المنطقة\": \"الحي 16\", \"المساحة\": \"74 متر\", \"السعر\": \"930661 جنيه\", \"الهاتف\": \"01000002963\", \"الحالة\": \"تم البيع\", \"ملاحظات\": \"عقار من ملف 10-Properties.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 813148, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV006", "file_source": "csvs/10-Properties.xlsx", "sheet_name": "Sheet3", "row_number": 7, "property_type": "بيت", "location": "المعادي", "area": "208", "price": "480222", "contact": "01000005514", "status": "تم البيع", "description": "بيت تم البيع في المعادي مساحة 208 متر", "raw_data": "{\"نوع_العقار\": \"بيت\", \"المنطقة\": \"المعادي\", \"المساحة\": \"208 متر\", \"السعر\": \"480222 جنيه\", \"الهاتف\": \"01000005514\", \"الحالة\": \"تم البيع\", \"ملاحظات\": \"عقار من ملف 10-Properties.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 813148, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV007", "file_source": "csvs/10-Properties.xlsx", "sheet_name": "Sheet1", "row_number": 8, "property_type": "مخزن", "location": "الشروق", "area": "81", "price": "1199691", "contact": "01000008885", "status": "متاح", "description": "مخزن متاح في الشروق مساحة 81 متر", "raw_data": "{\"نوع_العقار\": \"مخزن\", \"المنطقة\": \"الشروق\", \"المساحة\": \"81 متر\", \"السعر\": \"1199691 جنيه\", \"الهاتف\": \"01000008885\", \"الحالة\": \"متاح\", \"ملاحظات\": \"عقار من ملف 10-Properties.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 813148, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV008", "file_source": "csvs/10-Properties.xlsx", "sheet_name": "Sheet2", "row_number": 9, "property_type": "أرض", "location": "العبور", "area": "433", "price": "917386", "contact": "01000003361", "status": "تم البيع", "description": "أرض تم البيع في العبور مساحة 433 متر", "raw_data": "{\"نوع_العقار\": \"أرض\", \"المنطقة\": \"العبور\", \"المساحة\": \"433 متر\", \"السعر\": \"917386 جنيه\", \"الهاتف\": \"01000003361\", \"الحالة\": \"تم البيع\", \"ملاحظات\": \"عقار من ملف 10-Properties.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 813148, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV009", "file_source": "csvs/10-Properties.xlsx", "sheet_name": "Sheet3", "row_number": 10, "property_type": "عمارة", "location": "مدينة نصر", "area": "234", "price": "1192584", "contact": "01000001364", "status": "للبيع", "description": "عمارة للبيع في مدينة نصر مساحة 234 متر", "raw_data": "{\"نوع_العقار\": \"عمارة\", \"المنطقة\": \"مدينة نصر\", \"المساحة\": \"234 متر\", \"السعر\": \"1192584 جنيه\", \"الهاتف\": \"01000001364\", \"الحالة\": \"للبيع\", \"ملاحظات\": \"عقار من ملف 10-Properties.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 813148, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV010", "file_source": "csvs/10-Properties.xlsx", "sheet_name": "Sheet1", "row_number": 11, "property_type": "بيت", "location": "الشروق", "area": "237", "price": "973627", "contact": "01000009133", "status": "محجوز", "description": "بيت محجوز في الشروق مساحة 237 متر", "raw_data": "{\"نوع_العقار\": \"بيت\", \"المنطقة\": \"الشروق\", \"المساحة\": \"237 متر\", \"السعر\": \"973627 جنيه\", \"الهاتف\": \"01000009133\", \"الحالة\": \"محجوز\", \"ملاحظات\": \"عقار من ملف 10-Properties.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 813148, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV011", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet1", "row_number": 2, "property_type": "مكتب", "location": "المقطم", "area": "78", "price": "853946", "contact": "01000007765", "status": "متاح", "description": "مكتب متاح في المقطم مساحة 78 متر", "raw_data": "{\"نوع_العقار\": \"مكتب\", \"المنطقة\": \"المقطم\", \"المساحة\": \"78 متر\", \"السعر\": \"853946 جنيه\", \"الهاتف\": \"01000007765\", \"الحالة\": \"متاح\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV012", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet2", "row_number": 3, "property_type": "بيت", "location": "الحي العاشر", "area": "169", "price": "1186841", "contact": "01000009975", "status": "للإيجار", "description": "بيت للإيجار في الحي العاشر مساحة 169 متر", "raw_data": "{\"نوع_العقار\": \"بيت\", \"المنطقة\": \"الحي العاشر\", \"المساحة\": \"169 متر\", \"السعر\": \"1186841 جنيه\", \"الهاتف\": \"01000009975\", \"الحالة\": \"للإيجار\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV013", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet3", "row_number": 4, "property_type": "مخزن", "location": "مجاورة 42", "area": "217", "price": "998977", "contact": "01000008602", "status": "للبيع", "description": "مخزن للبيع في مجاورة 42 مساحة 217 متر", "raw_data": "{\"نوع_العقار\": \"مخزن\", \"المنطقة\": \"مجاورة 42\", \"المساحة\": \"217 متر\", \"السعر\": \"998977 جنيه\", \"الهاتف\": \"01000008602\", \"الحالة\": \"للبيع\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV014", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet1", "row_number": 5, "property_type": "عمارة", "location": "الحي العاشر", "area": "169", "price": "1226557", "contact": "01000005793", "status": "محجوز", "description": "عمارة محجوز في الحي العاشر مساحة 169 متر", "raw_data": "{\"نوع_العقار\": \"عمارة\", \"المنطقة\": \"الحي العاشر\", \"المساحة\": \"169 متر\", \"السعر\": \"1226557 جنيه\", \"الهاتف\": \"01000005793\", \"الحالة\": \"محجوز\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV015", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet2", "row_number": 6, "property_type": "مكتب", "location": "الزمالك", "area": "83", "price": "934103", "contact": "01000003209", "status": "محجوز", "description": "مكتب محجوز في الزمالك مساحة 83 متر", "raw_data": "{\"نوع_العقار\": \"مكتب\", \"المنطقة\": \"الزمالك\", \"المساحة\": \"83 متر\", \"السعر\": \"934103 جنيه\", \"الهاتف\": \"01000003209\", \"الحالة\": \"محجوز\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV016", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet3", "row_number": 7, "property_type": "بيت", "location": "العبور", "area": "224", "price": "753303", "contact": "01000007523", "status": "متاح", "description": "بيت متاح في العبور مساحة 224 متر", "raw_data": "{\"نوع_العقار\": \"بيت\", \"المنطقة\": \"العبور\", \"المساحة\": \"224 متر\", \"السعر\": \"753303 جنيه\", \"الهاتف\": \"01000007523\", \"الحالة\": \"متاح\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV017", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet1", "row_number": 8, "property_type": "مكتب", "location": "الحي 23", "area": "156", "price": "997646", "contact": "01000007027", "status": "متاح", "description": "مكتب متاح في الحي 23 مساحة 156 متر", "raw_data": "{\"نوع_العقار\": \"مكتب\", \"المنطقة\": \"الحي 23\", \"المساحة\": \"156 متر\", \"السعر\": \"997646 جنيه\", \"الهاتف\": \"01000007027\", \"الحالة\": \"متاح\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV018", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet2", "row_number": 9, "property_type": "مخزن", "location": "مصر الجديدة", "area": "96", "price": "645537", "contact": "01000005523", "status": "للبيع", "description": "مخزن للبيع في مصر الجديدة مساحة 96 متر", "raw_data": "{\"نوع_العقار\": \"مخزن\", \"المنطقة\": \"مصر الجديدة\", \"المساحة\": \"96 متر\", \"السعر\": \"645537 جنيه\", \"الهاتف\": \"01000005523\", \"الحالة\": \"للبيع\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV019", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet3", "row_number": 10, "property_type": "مخزن", "location": "مجاورة 42", "area": "208", "price": "931185", "contact": "01000002573", "status": "للبيع", "description": "مخزن للبيع في مجاورة 42 مساحة 208 متر", "raw_data": "{\"نوع_العقار\": \"مخزن\", \"المنطقة\": \"مجاورة 42\", \"المساحة\": \"208 متر\", \"السعر\": \"931185 جنيه\", \"الهاتف\": \"01000002573\", \"الحالة\": \"للبيع\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV020", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet1", "row_number": 11, "property_type": "بيت", "location": "مجاورة 42", "area": "217", "price": "881344", "contact": "01000006139", "status": "متاح", "description": "بيت متاح في مجاورة 42 مساحة 217 متر", "raw_data": "{\"نوع_العقار\": \"بيت\", \"المنطقة\": \"مجاورة 42\", \"المساحة\": \"217 متر\", \"السعر\": \"881344 جنيه\", \"الهاتف\": \"01000006139\", \"الحالة\": \"متاح\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV021", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet2", "row_number": 12, "property_type": "مخزن", "location": "الحي 32", "area": "92", "price": "389375", "contact": "01000006707", "status": "للبيع", "description": "مخزن للبيع في الحي 32 مساحة 92 متر", "raw_data": "{\"نوع_العقار\": \"مخزن\", \"المنطقة\": \"الحي 32\", \"المساحة\": \"92 متر\", \"السعر\": \"389375 جنيه\", \"الهاتف\": \"01000006707\", \"الحالة\": \"للبيع\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV022", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet3", "row_number": 13, "property_type": "فيلا", "location": "مجاورة 42", "area": "384", "price": "1337814", "contact": "01000002022", "status": "للبيع", "description": "فيلا للبيع في مجاورة 42 مساحة 384 متر", "raw_data": "{\"نوع_العقار\": \"فيلا\", \"المنطقة\": \"مجاورة 42\", \"المساحة\": \"384 متر\", \"السعر\": \"1337814 جنيه\", \"الهاتف\": \"01000002022\", \"الحالة\": \"للبيع\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV023", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet1", "row_number": 14, "property_type": "مكتب", "location": "المقطم", "area": "55", "price": "979830", "contact": "01000007900", "status": "للبيع", "description": "مكتب للبيع في المقطم مساحة 55 متر", "raw_data": "{\"نوع_العقار\": \"مكتب\", \"المنطقة\": \"المقطم\", \"المساحة\": \"55 متر\", \"السعر\": \"979830 جنيه\", \"الهاتف\": \"01000007900\", \"الحالة\": \"للبيع\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV024", "file_source": "csvs/Properties_Repair.xlsx", "sheet_name": "Sheet2", "row_number": 15, "property_type": "أرض", "location": "العبور", "area": "322", "price": "1295761", "contact": "01000009934", "status": "للبيع", "description": "أرض للبيع في العبور مساحة 322 متر", "raw_data": "{\"نوع_العقار\": \"أرض\", \"المنطقة\": \"العبور\", \"المساحة\": \"322 متر\", \"السعر\": \"1295761 جنيه\", \"الهاتف\": \"01000009934\", \"الحالة\": \"للبيع\", \"ملاحظات\": \"عقار من ملف Properties_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV025", "file_source": "csvs/Properties (2)_Repair.xlsx", "sheet_name": "Sheet1", "row_number": 2, "property_type": "محل تجاري", "location": "مصر الجديدة", "area": "196", "price": "1187130", "contact": "01000006599", "status": "محجوز", "description": "محل تجاري محجوز في مصر الجديدة مساحة 196 متر", "raw_data": "{\"نوع_العقار\": \"محل تجاري\", \"المنطقة\": \"مصر الجديدة\", \"المساحة\": \"196 متر\", \"السعر\": \"1187130 جنيه\", \"الهاتف\": \"01000006599\", \"الحالة\": \"محجوز\", \"ملاحظات\": \"عقار من ملف Properties (2)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV026", "file_source": "csvs/Properties (2)_Repair.xlsx", "sheet_name": "Sheet2", "row_number": 3, "property_type": "مكتب", "location": "مجاورة 15", "area": "73", "price": "1099445", "contact": "01000009530", "status": "للإيجار", "description": "مكتب للإيجار في مجاورة 15 مساحة 73 متر", "raw_data": "{\"نوع_العقار\": \"مكتب\", \"المنطقة\": \"مجاورة 15\", \"المساحة\": \"73 متر\", \"السعر\": \"1099445 جنيه\", \"الهاتف\": \"01000009530\", \"الحالة\": \"للإيجار\", \"ملاحظات\": \"عقار من ملف Properties (2)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV027", "file_source": "csvs/Properties (2)_Repair.xlsx", "sheet_name": "Sheet3", "row_number": 4, "property_type": "أرض", "location": "الزمالك", "area": "384", "price": "1077770", "contact": "01000007940", "status": "تم البيع", "description": "أرض تم البيع في الزمالك مساحة 384 متر", "raw_data": "{\"نوع_العقار\": \"أرض\", \"المنطقة\": \"الزمالك\", \"المساحة\": \"384 متر\", \"السعر\": \"1077770 جنيه\", \"الهاتف\": \"01000007940\", \"الحالة\": \"تم البيع\", \"ملاحظات\": \"عقار من ملف Properties (2)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV028", "file_source": "csvs/Properties (2)_Repair.xlsx", "sheet_name": "Sheet1", "row_number": 5, "property_type": "مكتب", "location": "مجاورة 15", "area": "193", "price": "466380", "contact": "01000005788", "status": "للإيجار", "description": "مكتب للإيجار في مجاورة 15 مساحة 193 متر", "raw_data": "{\"نوع_العقار\": \"مكتب\", \"المنطقة\": \"مجاورة 15\", \"المساحة\": \"193 متر\", \"السعر\": \"466380 جنيه\", \"الهاتف\": \"01000005788\", \"الحالة\": \"للإيجار\", \"ملاحظات\": \"عقار من ملف Properties (2)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV029", "file_source": "csvs/Properties (2)_Repair.xlsx", "sheet_name": "Sheet2", "row_number": 6, "property_type": "مخزن", "location": "المقطم", "area": "90", "price": "764457", "contact": "01000006014", "status": "تم البيع", "description": "مخزن تم البيع في المقطم مساحة 90 متر", "raw_data": "{\"نوع_العقار\": \"مخزن\", \"المنطقة\": \"المقطم\", \"المساحة\": \"90 متر\", \"السعر\": \"764457 جنيه\", \"الهاتف\": \"01000006014\", \"الحالة\": \"تم البيع\", \"ملاحظات\": \"عقار من ملف Properties (2)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV030", "file_source": "csvs/Properties (3).xlsx", "sheet_name": "Sheet1", "row_number": 2, "property_type": "بيت", "location": "مجاورة 15", "area": "107", "price": "661575", "contact": "01000001611", "status": "محجوز", "description": "بيت محجوز في مجاورة 15 مساحة 107 متر", "raw_data": "{\"نوع_العقار\": \"بيت\", \"المنطقة\": \"مجاورة 15\", \"المساحة\": \"107 متر\", \"السعر\": \"661575 جنيه\", \"الهاتف\": \"01000001611\", \"الحالة\": \"محجوز\", \"ملاحظات\": \"عقار من ملف Properties (3).xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV031", "file_source": "csvs/Properties (3).xlsx", "sheet_name": "Sheet2", "row_number": 3, "property_type": "أرض", "location": "القاهرة الجديدة", "area": "184", "price": "1053068", "contact": "01000001800", "status": "للإيجار", "description": "أرض للإيجار في القاهرة الجديدة مساحة 184 متر", "raw_data": "{\"نوع_العقار\": \"أرض\", \"المنطقة\": \"القاهرة الجديدة\", \"المساحة\": \"184 متر\", \"السعر\": \"1053068 جنيه\", \"الهاتف\": \"01000001800\", \"الحالة\": \"للإيجار\", \"ملاحظات\": \"عقار من ملف Properties (3).xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV032", "file_source": "csvs/Properties (3).xlsx", "sheet_name": "Sheet3", "row_number": 4, "property_type": "شقة", "location": "القاهرة الجديدة", "area": "133", "price": "1186986", "contact": "01000006481", "status": "تم البيع", "description": "شقة تم البيع في القاهرة الجديدة مساحة 133 متر", "raw_data": "{\"نوع_العقار\": \"شقة\", \"المنطقة\": \"القاهرة الجديدة\", \"المساحة\": \"133 متر\", \"السعر\": \"1186986 جنيه\", \"الهاتف\": \"01000006481\", \"الحالة\": \"تم البيع\", \"ملاحظات\": \"عقار من ملف Properties (3).xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV033", "file_source": "csvs/Properties (3).xlsx", "sheet_name": "Sheet1", "row_number": 5, "property_type": "مخزن", "location": "الزمالك", "area": "230", "price": "323391", "contact": "01000002967", "status": "للبيع", "description": "مخزن للبيع في الزمالك مساحة 230 متر", "raw_data": "{\"نوع_العقار\": \"مخزن\", \"المنطقة\": \"الزمالك\", \"المساحة\": \"230 متر\", \"السعر\": \"323391 جنيه\", \"الهاتف\": \"01000002967\", \"الحالة\": \"للبيع\", \"ملاحظات\": \"عقار من ملف Properties (3).xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV034", "file_source": "csvs/Properties (3).xlsx", "sheet_name": "Sheet2", "row_number": 6, "property_type": "بيت", "location": "مصر الجديدة", "area": "170", "price": "1100556", "contact": "01000005826", "status": "تم البيع", "description": "بيت تم البيع في مصر الجديدة مساحة 170 متر", "raw_data": "{\"نوع_العقار\": \"بيت\", \"المنطقة\": \"مصر الجديدة\", \"المساحة\": \"170 متر\", \"السعر\": \"1100556 جنيه\", \"الهاتف\": \"01000005826\", \"الحالة\": \"تم البيع\", \"ملاحظات\": \"عقار من ملف Properties (3).xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV035", "file_source": "csvs/Properties (3).xlsx", "sheet_name": "Sheet3", "row_number": 7, "property_type": "عمارة", "location": "الحي العاشر", "area": "139", "price": "1045522", "contact": "01000003702", "status": "متاح", "description": "عمارة متاح في الحي العاشر مساحة 139 متر", "raw_data": "{\"نوع_العقار\": \"عمارة\", \"المنطقة\": \"الحي العاشر\", \"المساحة\": \"139 متر\", \"السعر\": \"1045522 جنيه\", \"الهاتف\": \"01000003702\", \"الحالة\": \"متاح\", \"ملاحظات\": \"عقار من ملف Properties (3).xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV036", "file_source": "csvs/Properties (3).xlsx", "sheet_name": "Sheet1", "row_number": 8, "property_type": "مخزن", "location": "التجمع الخامس", "area": "140", "price": "761690", "contact": "01000008544", "status": "للإيجار", "description": "مخزن للإيجار في التجمع الخامس مساحة 140 متر", "raw_data": "{\"نوع_العقار\": \"مخزن\", \"المنطقة\": \"التجمع الخامس\", \"المساحة\": \"140 متر\", \"السعر\": \"761690 جنيه\", \"الهاتف\": \"01000008544\", \"الحالة\": \"للإيجار\", \"ملاحظات\": \"عقار من ملف Properties (3).xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 987296, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV037", "file_source": "csvs/Properties(1)_Repair.xlsx", "sheet_name": "Sheet1", "row_number": 2, "property_type": "محل تجاري", "location": "مجاورة 42", "area": "111", "price": "749512", "contact": "01000004846", "status": "متاح", "description": "محل تجاري متاح في مجاورة 42 مساحة 111 متر", "raw_data": "{\"نوع_العقار\": \"محل تجاري\", \"المنطقة\": \"مجاورة 42\", \"المساحة\": \"111 متر\", \"السعر\": \"749512 جنيه\", \"الهاتف\": \"01000004846\", \"الحالة\": \"متاح\", \"ملاحظات\": \"عقار من ملف Properties(1)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 977848, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV038", "file_source": "csvs/Properties(1)_Repair.xlsx", "sheet_name": "Sheet2", "row_number": 3, "property_type": "فيلا", "location": "التجمع الخامس", "area": "344", "price": "1853880", "contact": "01000001925", "status": "محجوز", "description": "فيلا محجوز في التجمع الخامس مساحة 344 متر", "raw_data": "{\"نوع_العقار\": \"فيلا\", \"المنطقة\": \"التجمع الخامس\", \"المساحة\": \"344 متر\", \"السعر\": \"1853880 جنيه\", \"الهاتف\": \"01000001925\", \"الحالة\": \"محجوز\", \"ملاحظات\": \"عقار من ملف Properties(1)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 977848, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV039", "file_source": "csvs/Properties(1)_Repair.xlsx", "sheet_name": "Sheet3", "row_number": 4, "property_type": "مكتب", "location": "التجمع الخامس", "area": "233", "price": "364874", "contact": "01000008982", "status": "تم البيع", "description": "مكتب تم البيع في التجمع الخامس مساحة 233 متر", "raw_data": "{\"نوع_العقار\": \"مكتب\", \"المنطقة\": \"التجمع الخامس\", \"المساحة\": \"233 متر\", \"السعر\": \"364874 جنيه\", \"الهاتف\": \"01000008982\", \"الحالة\": \"تم البيع\", \"ملاحظات\": \"عقار من ملف Properties(1)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 977848, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV040", "file_source": "csvs/Properties(1)_Repair.xlsx", "sheet_name": "Sheet1", "row_number": 5, "property_type": "فيلا", "location": "الزمالك", "area": "315", "price": "1925934", "contact": "01000001398", "status": "متاح", "description": "فيلا متاح في الزمالك مساحة 315 متر", "raw_data": "{\"نوع_العقار\": \"فيلا\", \"المنطقة\": \"الزمالك\", \"المساحة\": \"315 متر\", \"السعر\": \"1925934 جنيه\", \"الهاتف\": \"01000001398\", \"الحالة\": \"متاح\", \"ملاحظات\": \"عقار من ملف Properties(1)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 977848, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV041", "file_source": "csvs/Properties(1)_Repair.xlsx", "sheet_name": "Sheet2", "row_number": 6, "property_type": "مكتب", "location": "مدينة نصر", "area": "80", "price": "363846", "contact": "01000005538", "status": "محجوز", "description": "مكتب محجوز في مدينة نصر مساحة 80 متر", "raw_data": "{\"نوع_العقار\": \"مكتب\", \"المنطقة\": \"مدينة نصر\", \"المساحة\": \"80 متر\", \"السعر\": \"363846 جنيه\", \"الهاتف\": \"01000005538\", \"الحالة\": \"محجوز\", \"ملاحظات\": \"عقار من ملف Properties(1)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 977848, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV042", "file_source": "csvs/Properties(1)_Repair.xlsx", "sheet_name": "Sheet3", "row_number": 7, "property_type": "محل تجاري", "location": "القاهرة الجديدة", "area": "82", "price": "743590", "contact": "01000006566", "status": "متاح", "description": "محل تجاري متاح في القاهرة الجديدة مساحة 82 متر", "raw_data": "{\"نوع_العقار\": \"محل تجاري\", \"المنطقة\": \"القاهرة الجديدة\", \"المساحة\": \"82 متر\", \"السعر\": \"743590 جنيه\", \"الهاتف\": \"01000006566\", \"الحالة\": \"متاح\", \"ملاحظات\": \"عقار من ملف Properties(1)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 977848, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV043", "file_source": "csvs/Properties(1)_Repair.xlsx", "sheet_name": "Sheet1", "row_number": 8, "property_type": "شقة", "location": "القاهرة الجديدة", "area": "224", "price": "835183", "contact": "01000009349", "status": "للإيجار", "description": "شقة للإيجار في القاهرة الجديدة مساحة 224 متر", "raw_data": "{\"نوع_العقار\": \"شقة\", \"المنطقة\": \"القاهرة الجديدة\", \"المساحة\": \"224 متر\", \"السعر\": \"835183 جنيه\", \"الهاتف\": \"01000009349\", \"الحالة\": \"للإيجار\", \"ملاحظات\": \"عقار من ملف Properties(1)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 977848, "file_modified": "2025-07-23 09:36:38"}, {"unique_id": "CSV044", "file_source": "csvs/Properties(1)_Repair.xlsx", "sheet_name": "Sheet2", "row_number": 9, "property_type": "شقة", "location": "مدينة نصر", "area": "172", "price": "1407746", "contact": "01000006601", "status": "تم البيع", "description": "شقة تم البيع في مدينة نصر مساحة 172 متر", "raw_data": "{\"نوع_العقار\": \"شقة\", \"المنطقة\": \"مدينة نصر\", \"المساحة\": \"172 متر\", \"السعر\": \"1407746 جنيه\", \"الهاتف\": \"01000006601\", \"الحالة\": \"تم البيع\", \"ملاحظات\": \"عقار من ملف Properties(1)_Repair.xlsx\"}", "date_processed": "2025-07-26 07:31:09", "file_size": 977848, "file_modified": "2025-07-23 09:36:38"}];
+        let filteredData = [...currentData];
+        let currentPage = 1;
+        const recordsPerPage = 25;
+
+        // Chart data
+        const propertyTypeStats = {"شقة": 4, "عمارة": 4, "محل تجاري": 4, "بيت": 9, "مخزن": 8, "أرض": 4, "مكتب": 8, "فيلا": 3};
+        const statusStats = {"للبيع": 10, "تم البيع": 11, "محجوز": 8, "متاح": 9, "للإيجار": 6};
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeData();
+            initializeCharts();
+            setupEventListeners();
+        });
+
+        function initializeData() {
+            populateFilters();
+            displayData();
+        }
+
+        function initializeCharts() {
+            // Property Type Chart
+            const ptCtx = document.getElementById('propertyTypeChart').getContext('2d');
+            new Chart(ptCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(propertyTypeStats),
+                    datasets: [{
+                        data: Object.values(propertyTypeStats),
+                        backgroundColor: [
+                            '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', 
+                            '#06b6d4', '#6b7280', '#ef4444', '#84cc16'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Status Chart
+            const sCtx = document.getElementById('statusChart').getContext('2d');
+            new Chart(sCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(statusStats),
+                    datasets: [{
+                        data: Object.values(statusStats),
+                        backgroundColor: ['#10b981', '#3b82f6', '#84cc16', '#f59e0b', '#6b7280'],
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function populateFilters() {
+            const propertyTypes = [...new Set(currentData.map(item => item.property_type))];
+            const statuses = [...new Set(currentData.map(item => item.status))];
+
+            populateSelect('propertyTypeFilter', propertyTypes);
+            populateSelect('statusFilter', statuses);
+        }
+
+        function populateSelect(selectId, options) {
+            const select = document.getElementById(selectId);
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                select.appendChild(optionElement);
+            });
+        }
+
+        function displayData() {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+
+            const startIndex = (currentPage - 1) * recordsPerPage;
+            const endIndex = startIndex + recordsPerPage;
+            const pageData = filteredData.slice(startIndex, endIndex);
+
+            pageData.forEach(item => {
+                const row = document.createElement('tr');
+                row.className = 'table-row';
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.unique_id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="property-badge property-${item.property_type}">${item.property_type}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.location}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.area} متر</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${Number(item.price).toLocaleString()} ج.م</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="property-badge status-${item.status.replace(' ', '_')}">${item.status}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.contact}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <button onclick="viewDetails('${item.unique_id}')" class="action-btn btn-view">
+                            عرض التفاصيل
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            updatePaginationInfo();
+            updateRecordsCount();
+        }
+
+        function viewDetails(uniqueId) {
+            const item = currentData.find(d => d.unique_id === uniqueId);
+            if (!item) return;
+
+            const rawData = JSON.parse(item.raw_data || '{}');
+            
+            document.getElementById('modalContent').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">📋 معلومات العقار</h3>
+                        <div class="space-y-2">
+                            <p><span class="font-semibold text-gray-700">المعرف:</span> ${item.unique_id}</p>
+                            <p><span class="font-semibold text-gray-700">نوع العقار:</span> 
+                                <span class="property-badge property-${item.property_type}">${item.property_type}</span>
+                            </p>
+                            <p><span class="font-semibold text-gray-700">الموقع:</span> ${item.location}</p>
+                            <p><span class="font-semibold text-gray-700">المساحة:</span> ${item.area} متر مربع</p>
+                            <p><span class="font-semibold text-gray-700">السعر:</span> ${Number(item.price).toLocaleString()} جنيه مصري</p>
+                            <p><span class="font-semibold text-gray-700">الحالة:</span> 
+                                <span class="property-badge status-${item.status.replace(' ', '_')}">${item.status}</span>
+                            </p>
+                            <p><span class="font-semibold text-gray-700">التواصل:</span> ${item.contact}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">📁 معلومات المصدر</h3>
+                        <div class="space-y-2">
+                            <p><span class="font-semibold text-gray-700">الملف:</span> ${item.file_source.split('/').pop()}</p>
+                            <p><span class="font-semibold text-gray-700">الورقة:</span> ${item.sheet_name}</p>
+                            <p><span class="font-semibold text-gray-700">رقم الصف:</span> ${item.row_number}</p>
+                            <p><span class="font-semibold text-gray-700">تاريخ المعالجة:</span> ${item.date_processed}</p>
+                            ${item.file_size ? `<p><span class="font-semibold text-gray-700">حجم الملف:</span> ${(item.file_size / 1024).toFixed(1)} كيلوبايت</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">📝 الوصف</h3>
+                    <p class="text-gray-700 bg-gray-50 p-4 rounded-lg">${item.description}</p>
+                </div>
+                
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">🔍 البيانات الأصلية</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                            ${Object.entries(rawData).map(([key, value]) => `
+                                <div class="flex justify-between border-b border-gray-200 py-1">
+                                    <span class="font-medium text-gray-600">${key}:</span>
+                                    <span class="text-gray-800">${value}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('detailsModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').style.display = 'none';
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const propertyType = document.getElementById('propertyTypeFilter').value;
+            const status = document.getElementById('statusFilter').value;
+
+            filteredData = currentData.filter(item => {
+                const matchesSearch = !searchTerm || 
+                    Object.values(item).some(value => 
+                        String(value).toLowerCase().includes(searchTerm)
+                    );
+                
+                const matchesPropertyType = !propertyType || item.property_type === propertyType;
+                const matchesStatus = !status || item.status === status;
+
+                return matchesSearch && matchesPropertyType && matchesStatus;
+            });
+
+            currentPage = 1;
+            displayData();
+        }
+
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('propertyTypeFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            
+            filteredData = [...currentData];
+            currentPage = 1;
+            displayData();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
+            document.getElementById('propertyTypeFilter').addEventListener('change', applyFilters);
+            document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function updatePaginationInfo() {
+            const startIndex = (currentPage - 1) * recordsPerPage + 1;
+            const endIndex = Math.min(currentPage * recordsPerPage, filteredData.length);
+            const total = filteredData.length;
+
+            document.getElementById('paginationInfo').innerHTML = 
+                `عرض من <span class="font-medium">${startIndex}</span> إلى <span class="font-medium">${endIndex}</span> من أصل <span class="font-medium">${total}</span> نتيجة`;
+        }
+
+        function updateRecordsCount() {
+            const total = filteredData.length;
+            document.getElementById('recordsCount').textContent = `عرض ${total} عقار`;
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(filteredData.length / recordsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayData();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                displayData();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('detailsModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Add some smooth animations
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate cards on load
+            const cards = document.querySelectorAll('.data-card, .stat-card, .chart-container');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>
