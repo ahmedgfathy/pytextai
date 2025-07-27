@@ -75,6 +75,16 @@ temp_*.txt
 # *.csv
 # whatsapp_chat_exports/*.txt
 
+# Large files that exceed GitHub limits
+whatsapp_chats.csv
+whatsapp_chats_backup_20250723_110917.csv
+real_estate_data.db
+real_estate_data_backup_*.db
+*.db
+
+# Large backup CSV files
+whatsapp_chats_backup_*.csv
+
 # Backup files
 *.bak
 *.backup
