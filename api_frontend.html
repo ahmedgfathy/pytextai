@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate API Frontend - عارض بيانات العقارات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'whatsapp': '#25D366',
+                        'whatsapp-dark': '#075E54',
+                        'api': '#3b82f6'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            font-size: 16px; /* Increased base font size */
+        }
+        
+        .rtl-text {
+            direction: rtl;
+            text-align: right;
+        }
+        
+        .ltr-text {
+            direction: ltr;
+            text-align: left;
+        }
+        
+        .search-highlight {
+            background-color: #fef08a;
+            font-weight: 600;
+        }
+        
+        .table-row:hover {
+            background-color: #f0fdf4;
+        }
+        
+        .status-badge {
+            font-size: 0.875rem; /* Increased from 0.75rem */
+            padding: 0.375rem 0.625rem; /* Increased padding */
+            border-radius: 0.375rem;
+            margin: 0.125rem;
+            display: inline-block;
+        }
+        
+        .property-land { background-color: #dcfce7; color: #16a34a; }
+        .property-apartment { background-color: #dbeafe; color: #2563eb; }
+        .property-villa { background-color: #fef3c7; color: #d97706; }
+        .property-commercial { background-color: #f3e8ff; color: #9333ea; }
+        
+        .phone-number {
+            font-family: 'Courier New', monospace;
+            background-color: #f1f5f9;
+            padding: 0.25rem 0.375rem; /* Increased padding */
+            border-radius: 0.25rem;
+            font-size: 0.875rem; /* Increased from 0.75rem */
+        }
+        
+        .api-status {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 18px; /* Increased padding */
+            border-radius: 8px;
+            color: white;
+            font-size: 14px; /* Increased from 12px */
+            z-index: 1000;
+        }
+        
+        .api-connected { background-color: #10b981; }
+        .api-disconnected { background-color: #ef4444; }
+        .api-loading { background-color: #f59e0b; }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            direction: rtl;
+        }
+        
+        .modal-content.max-w-2xl {
+            max-width: 672px;
+        }
+        
+        .close {
+            color: #aaa;
+            float: left;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: black;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- API Status Indicator -->
+    <div id="api-status" class="api-status api-loading">
+        <div class="flex items-center">
+            <div class="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+            <span>جاري الاتصال بـ API...</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-api text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="text-left">
+                    <div class="text-lg font-semibold" id="total-records">0</div>
+                    <div class="text-sm text-blue-200">إجمالي السجلات</div>
+                    <div class="text-xs text-blue-300 mt-1">
+                        <span id="api-url">API: http://localhost:5002</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-reverse space-x-4">
+                    <div class="bg-white/20 p-3 rounded-lg">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold">عارض بيانات العقارات - API Frontend</h1>
+                        <p class="text-blue-200">واجهة متصلة بقاعدة البيانات SQLite عبر Flask API</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Statistics Bar -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="container mx-auto px-4 py-4">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="text-center">
+                    <div class="text-xl font-bold text-green-600" id="stats-senders">0</div>
+                    <div class="text-sm text-gray-600">مرسلين فريدين</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xl font-bold text-blue-600" id="stats-regions">0</div>
+                    <div class="text-sm text-gray-600">مناطق</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xl font-bold text-purple-600" id="stats-types">0</div>
+                    <div class="text-sm text-gray-600">أنواع عقارات</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xl font-bold text-yellow-600" id="stats-with-phone">0</div>
+                    <div class="text-sm text-gray-600">بأرقام هواتف</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xl font-bold text-red-600" id="stats-with-region">0</div>
+                    <div class="text-sm text-gray-600">بمعلومات المنطقة</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="container mx-auto px-4 py-6">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">البحث والمرشحات</h3>
+                <div class="flex space-x-reverse space-x-2">
+                    <button onclick="testAPI()" class="px-3 py-1 bg-red-500 text-white rounded-md text-sm hover:bg-red-600">
+                        اختبار API
+                    </button>
+                    <button onclick="loadStats()" class="px-3 py-1 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600">
+                        تحديث الإحصائيات
+                    </button>
+                    <button onclick="clearAllFilters()" class="px-3 py-1 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600">
+                        مسح الكل
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">البحث</label>
+                    <input type="text" id="search-query" placeholder="ابحث في جميع الحقول..." 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-api">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">نوع العقار</label>
+                    <select id="property-type-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-api">
+                        <option value="">جميع الأنواع</option>
+                        <option value="land">أرض</option>
+                        <option value="apartment">شقة</option>
+                        <option value="villa">فيلا</option>
+                        <option value="commercial">تجاري</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">المنطقة</label>
+                    <input type="text" id="region-filter" placeholder="اسم المنطقة..." 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-api">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">المرسل</label>
+                    <input type="text" id="sender-filter" placeholder="اسم المرسل..." 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-api">
+                </div>
+            </div>
+            
+            <div class="mt-4 flex items-center justify-between">
+                <div class="flex items-center space-x-reverse space-x-4">
+                    <button onclick="searchProperties()" class="px-4 py-2 bg-api text-white rounded-md hover:bg-blue-700">
+                        بحث
+                    </button>
+                    <button onclick="loadAllProperties()" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+                        عرض الكل
+                    </button>
+                </div>
+                <div class="flex items-center space-x-reverse space-x-2 text-sm text-gray-600">
+                    <label>عدد النتائج:</label>
+                    <select id="limit-select" class="px-2 py-1 border border-gray-300 rounded">
+                        <option value="20">20</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <h3 class="text-md font-semibold mb-3">إجراءات سريعة</h3>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="showAddPropertyModal()" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">
+                    ➕ إضافة عقار جديد
+                </button>
+                <button onclick="removeDuplicates()" class="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600">
+                    🗑️ إزالة المكرر
+                </button>
+                <button onclick="loadTopRegions()" class="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600">
+                    📍 أهم المناطق
+                </button>
+                <button onclick="loadTopSenders()" class="px-3 py-1 bg-purple-500 text-white rounded text-sm hover:bg-purple-600">
+                    👥 أكثر المرسلين نشاطاً
+                </button>
+                <button onclick="loadPropertyTypes()" class="px-3 py-1 bg-indigo-500 text-white rounded text-sm hover:bg-indigo-600">
+                    🏠 توزيع أنواع العقارات
+                </button>
+                <button onclick="searchByKeyword('للبيع')" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">
+                    💰 عقارات للبيع
+                </button>
+                <button onclick="searchByKeyword('شقة')" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
+                    🏢 الشقق
+                </button>
+                <button onclick="searchByKeyword('فيلا')" class="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600">
+                    🏘️ الفيلات
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Container -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-4 bg-gray-50 border-b">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold">النتائج</h3>
+                    <div id="results-info" class="text-sm text-gray-600">
+                        جاري التحميل...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المعرف</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المرسل</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الهاتف</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المنطقة</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">نوع العقار</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الرسالة</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">التاريخ</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Enhanced Pagination -->
+            <div class="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                <div class="flex items-center">
+                    <span class="text-base text-gray-700" id="pagination-info">
+                        عرض النتائج
+                    </span>
+                </div>
+                <div class="flex items-center space-x-reverse space-x-3">
+                    <div class="flex items-center space-x-reverse space-x-2">
+                        <label for="page-size" class="text-sm text-gray-600 ml-2">العناصر في الصفحة:</label>
+                        <select id="page-size" onchange="changePageSize()" 
+                                class="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                            <option value="20">20</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center space-x-reverse space-x-1">
+                        <button onclick="firstPage()" id="first-btn" 
+                                class="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                            الأول
+                        </button>
+                        <button onclick="previousPage()" id="prev-btn" 
+                                class="px-4 py-2 bg-gray-500 text-white rounded text-sm hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                            السابق
+                        </button>
+                        <span id="page-numbers" class="px-4 py-2 text-sm font-medium text-gray-700">
+                            صفحة 1
+                        </span>
+                        <button onclick="nextPage()" id="next-btn" 
+                                class="px-4 py-2 bg-gray-500 text-white rounded text-sm hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                            التالي
+                        </button>
+                        <button onclick="lastPage()" id="last-btn" 
+                                class="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                            الأخير
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Property Details Modal -->
+    <div id="propertyModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePropertyModal()">&times;</span>
+            <h2 class="text-xl font-bold mb-4">تفاصيل العقار</h2>
+            <div id="propertyDetails"></div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Property Modal -->
+    <div id="addEditModal" class="modal">
+        <div class="modal-content max-w-2xl">
+            <span class="close" onclick="closeAddEditModal()">&times;</span>
+            <h2 id="addEditTitle" class="text-xl font-bold mb-4">إضافة عقار جديد</h2>
+            <form id="propertyForm" class="space-y-4">
+                <input type="hidden" id="propertyId" name="unique_id">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">اسم المرسل *</label>
+                        <input type="text" id="senderName" name="sender_name" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">المنطقة</label>
+                        <input type="text" id="region" name="region"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">نوع العقار</label>
+                        <select id="propertyType" name="property_type"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">اختر النوع</option>
+                            <option value="شقة">شقة</option>
+                            <option value="فيلا">فيلا</option>
+                            <option value="أرض">أرض</option>
+                            <option value="تجاري">تجاري</option>
+                            <option value="مكتب">مكتب</option>
+                            <option value="استوديو">استوديو</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">التاريخ</label>
+                        <input type="date" id="date" name="date"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">الوقت</label>
+                        <input type="time" id="time" name="time"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">الرسالة *</label>
+                    <textarea id="message" name="message" rows="4" required
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="أدخل تفاصيل العقار..."></textarea>
+                </div>
+                
+                <div class="flex justify-end space-x-reverse space-x-3 pt-4">
+                    <button type="button" onclick="closeAddEditModal()" 
+                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
+                        إلغاء
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                        حفظ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="api-status" class="api-status api-loading">
+        <span>جاري التحميل...</span>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:8000';
+        
+        // State management
+        let currentOffset = 0;
+        let currentLimit = 50;
+        let currentData = [];
+        let hasMore = false;
+        
+        // Check API connection on load
+        async function checkApiConnection() {
+            try {
+                updateApiStatus('loading', 'جاري فحص الاتصال...');
+                
+                // First check health endpoint
+                const healthResponse = await fetch(`${API_BASE_URL}/health`);
+                if (healthResponse.ok) {
+                    const health = await healthResponse.json();
+                    console.log('Health check:', health);
+                    
+                    if (health.status === 'healthy') {
+                        updateApiStatus('connected', 'متصل بـ API وقاعدة البيانات');
+                        loadStats();
+                        loadAllProperties();
+                    } else {
+                        updateApiStatus('disconnected', `خطأ في قاعدة البيانات: ${health.database}`);
+                    }
+                } else {
+                    // Fallback to basic API check
+                    const response = await fetch(`${API_BASE_URL}/`);
+                    if (response.ok) {
+                        updateApiStatus('connected', 'متصل بـ API');
+                        loadStats();
+                        loadAllProperties();
+                    } else {
+                        throw new Error('API not responding');
+                    }
+                }
+            } catch (error) {
+                updateApiStatus('disconnected', `فشل الاتصال بـ API - تأكد من تشغيل الخادم على المنفذ 8000`);
+                console.error('API connection failed:', error);
+            }
+        }
+        
+        function updateApiStatus(status, message) {
+            const statusEl = document.getElementById('api-status');
+            statusEl.className = `api-status api-${status}`;
+            statusEl.innerHTML = `<span>${message}</span>`;
+            
+            if (status === 'connected') {
+                setTimeout(() => statusEl.style.display = 'none', 3000);
+            }
+        }
+        
+        // Load database statistics
+        async function loadStats() {
+            try {
+                updateApiStatus('loading', 'جاري تحميل الإحصائيات...');
+                const response = await fetch(`${API_BASE_URL}/api/stats`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result && result.error) {
+                    throw new Error(result.error);
+                }
+                
+                if (result && result.total_properties !== undefined) {
+                    document.getElementById('total-records').textContent = result.total_properties.toLocaleString();
+                    document.getElementById('stats-senders').textContent = result.unique_senders.toLocaleString();
+                    document.getElementById('stats-regions').textContent = result.unique_regions.toLocaleString();
+                    document.getElementById('stats-types').textContent = result.unique_property_types.toLocaleString();
+                    
+                    updateApiStatus('connected', 'تم تحديث الإحصائيات');
+                } else {
+                    updateApiStatus('disconnected', 'بيانات الإحصائيات غير صحيحة');
+                }
+            } catch (error) {
+                updateApiStatus('disconnected', `خطأ في تحميل الإحصائيات: ${error.message}`);
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        // Load all properties
+        async function loadAllProperties() {
+            const limit = document.getElementById('limit-select').value;
+            const propertyType = document.getElementById('property-type-filter').value;
+            const region = document.getElementById('region-filter').value;
+            const sender = document.getElementById('sender-filter').value;
+            
+            let url = `${API_BASE_URL}/api/properties?limit=${limit}&page=1`;
+            
+            if (propertyType) url += `&property_type=${encodeURIComponent(propertyType)}`;
+            if (region) url += `&region=${encodeURIComponent(region)}`;
+            if (sender) url += `&sender=${encodeURIComponent(sender)}`;
+            
+            try {
+                updateApiStatus('loading', 'جاري تحميل البيانات...');
+                console.log('Fetching from URL:', url);
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                console.log('API Response:', result);
+                
+                if (result && result.data) {
+                    currentData = result.data;
+                    displayProperties(result.data);
+                    updateApiStatus('connected', `تم تحميل ${result.data.length} عقار`);
+                } else {
+                    console.error('No data in response:', result);
+                    updateApiStatus('disconnected', 'لم يتم العثور على بيانات');
+                    displayProperties([]); // Show empty state
+                }
+            } catch (error) {
+                updateApiStatus('disconnected', 'خطأ في تحميل البيانات');
+                console.error('Error loading properties:', error);
+                displayProperties([]); // Show empty state
+            }
+        }
+        
+        // Test API connection and data loading
+        async function testAPI() {
+            try {
+                console.log('Testing API connection...');
+                updateApiStatus('loading', 'اختبار الاتصال...');
+                
+                // Test stats endpoint
+                const statsResponse = await fetch(`${API_BASE_URL}/api/stats`);
+                const statsData = await statsResponse.json();
+                console.log('Stats data:', statsData);
+                
+                // Test properties endpoint
+                const propsResponse = await fetch(`${API_BASE_URL}/api/properties?limit=3`);
+                const propsData = await propsResponse.json();
+                console.log('Properties data:', propsData);
+                
+                // Update display with test data
+                if (statsData) {
+                    document.getElementById('total-records').textContent = statsData.total_properties.toLocaleString();
+                }
+                
+                if (propsData && propsData.data) {
+                    displayProperties(propsData.data);
+                    updateApiStatus('connected', `تم تحميل ${propsData.data.length} عقار للاختبار`);
+                } else {
+                    updateApiStatus('disconnected', 'لا توجد بيانات');
+                }
+                
+            } catch (error) {
+                updateApiStatus('disconnected', 'خطأ في الاتصال');
+                console.error('Test API error:', error);
+            }
+        }
+        
+        // Load all properties
+        async function loadAllProperties() {
+            const limit = document.getElementById('limit-select').value;
+            const propertyType = document.getElementById('property-type-filter').value;
+            const region = document.getElementById('region-filter').value;
+            const sender = document.getElementById('sender-filter').value;
+            
+            let url = `${API_BASE_URL}/api/properties?limit=${limit}&page=1`;
+            
+            if (propertyType) url += `&property_type=${encodeURIComponent(propertyType)}`;
+            if (region) url += `&region=${encodeURIComponent(region)}`;
+            if (sender) url += `&sender=${encodeURIComponent(sender)}`;
+            
+            try {
+                updateApiStatus('loading', 'جاري تحميل البيانات...');
+                console.log('Fetching from URL:', url);
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                console.log('API Response:', result);
+                
+                if (result && result.data) {
+                    currentData = result.data;
+                    displayProperties(result.data);
+                    updateApiStatus('connected', `تم تحميل ${result.data.length} عقار`);
+                } else {
+                    console.error('No data in response:', result);
+                    updateApiStatus('disconnected', 'لم يتم العثور على بيانات');
+                    displayProperties([]); // Show empty state
+                }
+            } catch (error) {
+                updateApiStatus('disconnected', 'خطأ في تحميل البيانات');
+                console.error('Error loading properties:', error);
+                displayProperties([]); // Show empty state
+            }
+        }
+        
+        // Test API connection and data loading
+        async function testAPI() {
+            try {
+                console.log('Testing API connection...');
+                updateApiStatus('loading', 'اختبار الاتصال...');
+                
+                // Test stats endpoint
+                const statsResponse = await fetch(`${API_BASE_URL}/api/stats`);
+                const statsData = await statsResponse.json();
+                console.log('Stats data:', statsData);
+                
+                // Test properties endpoint
+                const propsResponse = await fetch(`${API_BASE_URL}/api/properties?limit=3`);
+                const propsData = await propsResponse.json();
+                console.log('Properties data:', propsData);
+                
+                // Update display with test data
+                if (statsData) {
+                    document.getElementById('total-records').textContent = statsData.total_properties.toLocaleString();
+                }
+                
+                if (propsData && propsData.data) {
+                    displayProperties(propsData.data);
+                    updateApiStatus('connected', `تم تحميل ${propsData.data.length} عقار للاختبار`);
+                } else {
+                    updateApiStatus('disconnected', 'لا توجد بيانات');
+                }
+                
+            } catch (error) {
+                updateApiStatus('disconnected', 'خطأ في الاتصال');
+                console.error('Test API error:', error);
+            }
+        }
+        
+        // Search properties
+        async function searchProperties() {
+            try {
+                updateApiStatus('loading', 'جاري البحث...');
+                
+                const searchQuery = document.getElementById('search-query').value;
+                const propertyType = document.getElementById('property-type-filter').value;
+                const region = document.getElementById('region-filter').value;
+                const sender = document.getElementById('sender-filter').value;
+                const limit = parseInt(document.getElementById('limit-select').value);
+                
+                let url = `${API_BASE_URL}/api/properties?limit=${limit}&page=1`;
+                
+                if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+                if (propertyType) url += `&property_type=${encodeURIComponent(propertyType)}`;
+                if (region) url += `&region=${encodeURIComponent(region)}`;
+                if (sender) url += `&sender=${encodeURIComponent(sender)}`;
+                
+                console.log('Searching with URL:', url);
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result && result.data) {
+                    currentData = result.data;
+                    displayProperties(result.data);
+                    
+                    const total = result.pagination?.total || result.data.length;
+                    let infoText = `عرض ${result.data.length} من أصل ${total} نتيجة`;
+                    if (searchQuery || propertyType || region || sender) {
+                        infoText += ' (مُرشّح)';
+                    }
+                    document.getElementById('pagination-info').textContent = infoText;
+                    
+                    updateApiStatus('connected', `تم العثور على ${result.data.length} نتيجة`);
+                } else {
+                    updateApiStatus('disconnected', 'خطأ في البحث');
+                }
+            } catch (error) {
+                updateApiStatus('disconnected', `خطأ في البحث: ${error.message}`);
+                console.error('Error searching properties:', error);
+            }
+        }
+        
+        // Search by specific keyword
+        async function searchByKeyword(keyword) {
+            document.getElementById('search-query').value = keyword;
+            await searchProperties();
+        }
+        
+        // Display properties in table
+        function displayProperties(properties) {
+            console.log('Displaying properties:', properties);
+            const tbody = document.getElementById('data-table-body');
+            
+            if (!tbody) {
+                console.error('Table body element not found!');
+                return;
+            }
+            
+            if (properties.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                            <div class="text-lg">لا توجد نتائج</div>
+                            <div class="text-sm mt-2">جرب تعديل مرشحات البحث</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = properties.map(property => `
+                <tr class="table-row">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900 ltr-text">
+                        ${property.unique_id || 'N/A'}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-900 rtl-text">
+                        <div class="truncate max-w-32" title="${property.sender_name}">
+                            ${property.sender_name || 'غير محدد'}
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">
+                        ${property.sender_phone ? `<div class="phone-number ltr-text">${property.sender_phone}</div>` : 'غير متوفر'}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500 rtl-text">
+                        <div class="truncate max-w-32" title="${property.region}">
+                            ${property.region || 'غير محدد'}
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">
+                        ${formatPropertyType(property.property_type)}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-900 rtl-text">
+                        <div class="truncate max-w-64" title="${property.message || ''}">
+                            ${property.message ? property.message.substring(0, 100) + (property.message.length > 100 ? '...' : '') : 'لا توجد رسالة'}
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500 ltr-text">
+                        <div class="text-xs">${property.date || ''}</div>
+                        <div class="text-xs text-gray-400">${property.time || ''}</div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">
+                        <div class="flex space-x-reverse space-x-1">
+                            <button onclick="viewPropertyDetails('${property.unique_id}')" 
+                                    class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600" title="عرض التفاصيل">
+                                👁️
+                            </button>
+                            <button onclick="editProperty('${property.unique_id}')" 
+                                    class="px-2 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600" title="تعديل">
+                                ✏️
+                            </button>
+                            <button onclick="deleteProperty('${property.unique_id}')" 
+                                    class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600" title="حذف">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // Format property type
+        function formatPropertyType(type) {
+            if (!type) return '<span class="text-gray-400">غير محدد</span>';
+            
+            const typeMap = {
+                'land': { ar: 'أرض', class: 'property-land' },
+                'apartment': { ar: 'شقة', class: 'property-apartment' },
+                'villa': { ar: 'فيلا', class: 'property-villa' },
+                'commercial': { ar: 'تجاري', class: 'property-commercial' }
+            };
+            
+            const typeInfo = typeMap[type] || { ar: type, class: 'status-badge' };
+            return `<span class="status-badge ${typeInfo.class}">${typeInfo.ar}</span>`;
+        }
+        
+        // View property details
+        async function viewPropertyDetails(uniqueId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/property/${uniqueId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    const property = result.data;
+                    showPropertyModal(property);
+                } else {
+                    alert(`خطأ في تحميل تفاصيل العقار: ${result.message}`);
+                }
+            } catch (error) {
+                alert(`خطأ في الاتصال بالخادم: ${error.message}`);
+                console.error('Error loading property details:', error);
+            }
+        }
+        
+        // Show property modal
+        function showPropertyModal(property) {
+            const modal = document.getElementById('propertyModal');
+            const details = document.getElementById('propertyDetails');
+            
+            details.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">المعرف:</label>
+                        <p class="mt-1 text-sm text-gray-900 ltr-text">${property.unique_id || 'غير محدد'}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">التاريخ:</label>
+                        <p class="mt-1 text-sm text-gray-900 ltr-text">${property.date || 'غير محدد'}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">الوقت:</label>
+                        <p class="mt-1 text-sm text-gray-900 ltr-text">${property.time || 'غير محدد'}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">المرسل:</label>
+                        <p class="mt-1 text-sm text-gray-900">${property.sender_name || 'غير محدد'}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">نوع العقار:</label>
+                        <p class="mt-1 text-sm text-gray-900">${property.property_type || 'غير محدد'}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">المنطقة:</label>
+                        <p class="mt-1 text-sm text-gray-900">${property.region || 'غير محدد'}</p>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700">الرسالة الكاملة:</label>
+                    <div class="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-900 rtl-text max-h-32 overflow-y-auto">
+                        ${property.message || 'لا توجد رسالة'}
+                    </div>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+        
+        function closePropertyModal() {
+            document.getElementById('propertyModal').style.display = 'none';
+        }
+
+        // CRUD Functions
+
+        // Show Add Property Modal
+        function showAddPropertyModal() {
+            document.getElementById('addEditTitle').textContent = 'إضافة عقار جديد';
+            document.getElementById('propertyForm').reset();
+            document.getElementById('propertyId').value = '';
+            
+            // Set current date and time
+            const now = new Date();
+            document.getElementById('date').value = now.toISOString().split('T')[0];
+            document.getElementById('time').value = now.toTimeString().split(' ')[0].substring(0, 5);
+            
+            document.getElementById('addEditModal').style.display = 'block';
+        }
+
+        // Edit Property
+        async function editProperty(uniqueId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/property/${uniqueId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                if (result.status === 'success') {
+                    const property = result.data;
+                    
+                    document.getElementById('addEditTitle').textContent = 'تعديل العقار';
+                    document.getElementById('propertyId').value = property.unique_id;
+                    document.getElementById('senderName').value = property.sender_name || '';
+                    document.getElementById('region').value = property.region || '';
+                    document.getElementById('propertyType').value = property.property_type || '';
+                    document.getElementById('message').value = property.message || '';
+                    document.getElementById('date').value = property.date || '';
+                    document.getElementById('time').value = property.time || '';
+                    
+                    document.getElementById('addEditModal').style.display = 'block';
+                } else {
+                    alert(`خطأ في تحميل بيانات العقار: ${result.message}`);
+                }
+            } catch (error) {
+                alert(`خطأ في الاتصال بالخادم: ${error.message}`);
+                console.error('Error loading property for edit:', error);
+            }
+        }
+
+        // Delete Property
+        async function deleteProperty(uniqueId) {
+            if (!confirm('هل أنت متأكد من حذف هذا العقار؟ لا يمكن التراجع عن هذا الإجراء.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/property/${uniqueId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert('تم حذف العقار بنجاح');
+                    loadAllProperties(); // Refresh the list
+                    loadStats(); // Refresh stats
+                } else {
+                    alert(`خطأ في حذف العقار: ${result.message}`);
+                }
+            } catch (error) {
+                alert(`خطأ في الاتصال بالخادم: ${error.message}`);
+                console.error('Error deleting property:', error);
+            }
+        }
+
+        // Remove Duplicates
+        async function removeDuplicates() {
+            if (!confirm('هل أنت متأكد من إزالة العقارات المكررة؟ سيتم الاحتفاظ بأول عقار لكل رسالة مكررة.')) {
+                return;
+            }
+            
+            try {
+                updateApiStatus('loading', 'جاري إزالة المكرر...');
+                
+                const response = await fetch(`${API_BASE_URL}/api/remove-duplicates`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert(`تم إزالة ${result.total_removed} عقار مكرر من أصل ${result.duplicates_found} مجموعة مكررة`);
+                    loadAllProperties(); // Refresh the list
+                    loadStats(); // Refresh stats
+                    updateApiStatus('connected', 'تم إزالة المكرر بنجاح');
+                } else {
+                    alert(`خطأ في إزالة المكرر: ${result.message}`);
+                    updateApiStatus('disconnected', 'فشل في إزالة المكرر');
+                }
+            } catch (error) {
+                alert(`خطأ في الاتصال بالخادم: ${error.message}`);
+                updateApiStatus('disconnected', 'خطأ في إزالة المكرر');
+                console.error('Error removing duplicates:', error);
+            }
+        }
+
+        // Close Add/Edit Modal
+        function closeAddEditModal() {
+            document.getElementById('addEditModal').style.display = 'none';
+        }
+        
+        // Load top regions
+        async function loadTopRegions() {
+            try {
+                updateApiStatus('loading', 'جاري تحميل أهم المناطق...');
+                const response = await fetch(`${API_BASE_URL}/api/regions?limit=20`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                // API returns {status: 'success', data: [...]} format
+                if (result.status === 'success' && result.data) {
+                    showDataModal('أهم 20 منطقة', result.data.map(item => 
+                        `<tr><td class="px-4 py-2 border-b">${item.region}</td><td class="px-4 py-2 border-b ltr-text">${item.count.toLocaleString()}</td></tr>`
+                    ).join(''), ['المنطقة', 'عدد العقارات']);
+                    updateApiStatus('connected', `تم تحميل ${result.data.length} منطقة`);
+                } else {
+                    throw new Error('Invalid response format');
+                }
+            } catch (error) {
+                updateApiStatus('disconnected', 'خطأ في تحميل المناطق');
+                alert(`خطأ في تحميل المناطق: ${error.message}`);
+                console.error('Error loading regions:', error);
+            }
+        }
+        
+        // Load top senders
+        async function loadTopSenders() {
+            try {
+                updateApiStatus('loading', 'جاري تحميل أكثر المرسلين نشاطاً...');
+                const response = await fetch(`${API_BASE_URL}/api/senders?limit=15`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                // API returns {status: 'success', data: [...]} format
+                if (result.status === 'success' && result.data) {
+                    showDataModal('أكثر 15 مرسل نشاطاً', result.data.map(item => 
+                        `<tr><td class="px-4 py-2 border-b">${item.sender_name}</td><td class="px-4 py-2 border-b ltr-text">${item.count.toLocaleString()}</td></tr>`
+                    ).join(''), ['المرسل', 'عدد الرسائل']);
+                    updateApiStatus('connected', `تم تحميل ${result.data.length} مرسل`);
+                } else {
+                    throw new Error('Invalid response format');
+                }
+            } catch (error) {
+                updateApiStatus('disconnected', 'خطأ في تحميل المرسلين');
+                alert(`خطأ في تحميل المرسلين: ${error.message}`);
+                console.error('Error loading senders:', error);
+            }
+        }
+        
+        // Load property types
+        async function loadPropertyTypes() {
+            try {
+                updateApiStatus('loading', 'جاري تحميل أنواع العقارات...');
+                const response = await fetch(`${API_BASE_URL}/api/property-types`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                // API returns array directly [{property_type, count}]
+                if (Array.isArray(result) && result.length > 0) {
+                    // Calculate percentages
+                    const total = result.reduce((sum, item) => sum + item.count, 0);
+                    const dataWithPercentages = result.map(item => ({
+                        ...item,
+                        percentage: ((item.count / total) * 100).toFixed(1)
+                    }));
+                    
+                    showDataModal('توزيع أنواع العقارات', dataWithPercentages.map(item => 
+                        `<tr><td class="px-4 py-2 border-b">${formatPropertyType(item.property_type)}</td><td class="px-4 py-2 border-b ltr-text">${item.count.toLocaleString()}</td><td class="px-4 py-2 border-b ltr-text">${item.percentage}%</td></tr>`
+                    ).join(''), ['نوع العقار', 'العدد', 'النسبة']);
+                    updateApiStatus('connected', `تم تحميل ${result.length} نوع عقار`);
+                } else {
+                    throw new Error('No property types found');
+                }
+            } catch (error) {
+                updateApiStatus('disconnected', 'خطأ في تحميل أنواع العقارات');
+                alert(`خطأ في تحميل أنواع العقارات: ${error.message}`);
+                console.error('Error loading property types:', error);
+            }
+        }
+        
+        // Show data modal
+        function showDataModal(title, rows, headers) {
+            const modal = document.getElementById('propertyModal');
+            const details = document.getElementById('propertyDetails');
+            
+            details.innerHTML = `
+                <h3 class="text-lg font-semibold mb-4">${title}</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                ${headers.map(header => `<th class="px-4 py-2 border-b text-right font-medium">${header}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+        
+        // Update pagination info
+        function updatePaginationInfo(pagination) {
+            const info = document.getElementById('pagination-info');
+            info.textContent = `عرض ${pagination.offset + 1} - ${pagination.offset + currentData.length} من ${pagination.total.toLocaleString()} عقار`;
+            
+            document.getElementById('prev-btn').disabled = pagination.offset === 0;
+            document.getElementById('next-btn').disabled = !pagination.has_more;
+        }
+        
+        // Update results info
+        function updateResultsInfo(pagination) {
+            const info = document.getElementById('results-info');
+            if (pagination && pagination.total !== undefined) {
+                info.textContent = `عرض ${currentData.length} من أصل ${pagination.total.toLocaleString()} عقار`;
+            } else {
+                info.textContent = `عرض ${currentData.length} نتيجة`;
+            }
+            
+            // Update pagination buttons if they exist
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            
+            if (prevBtn && nextBtn && pagination) {
+                prevBtn.disabled = pagination.page <= 1;
+                nextBtn.disabled = !pagination.has_more;
+            }
+        }
+        
+        // Pagination functions
+        function nextPage() {
+            if (hasMore) {
+                currentOffset += currentLimit;
+                loadAllProperties();
+            }
+        }
+        
+        function previousPage() {
+            if (currentOffset > 0) {
+                currentOffset = Math.max(0, currentOffset - currentLimit);
+                loadAllProperties();
+            }
+        }
+        
+        // Clear all filters
+        function clearAllFilters() {
+            document.getElementById('search-query').value = '';
+            document.getElementById('property-type-filter').value = '';
+            document.getElementById('region-filter').value = '';
+            document.getElementById('sender-filter').value = '';
+            currentOffset = 0;
+            searchProperties();
+        }
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            checkApiConnection();
+            
+            // Property Form Submission
+            document.getElementById('propertyForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const propertyData = Object.fromEntries(formData.entries());
+                const isEdit = !!document.getElementById('propertyId').value;
+                
+                try {
+                    updateApiStatus('loading', isEdit ? 'جاري تحديث العقار...' : 'جاري إضافة العقار...');
+                    
+                    const url = isEdit 
+                        ? `${API_BASE_URL}/property/${propertyData.unique_id}`
+                        : `${API_BASE_URL}/api/property`;
+                    
+                    const method = isEdit ? 'PUT' : 'POST';
+                    
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(propertyData)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        alert(isEdit ? 'تم تحديث العقار بنجاح' : 'تم إضافة العقار بنجاح');
+                        closeAddEditModal();
+                        loadAllProperties(); // Refresh the list
+                        loadStats(); // Refresh stats
+                        updateApiStatus('connected', isEdit ? 'تم التحديث بنجاح' : 'تم الإضافة بنجاح');
+                    } else {
+                        alert(`خطأ: ${result.message}`);
+                        updateApiStatus('disconnected', isEdit ? 'فشل في التحديث' : 'فشل في الإضافة');
+                    }
+                } catch (error) {
+                    alert(`خطأ في الاتصال بالخادم: ${error.message}`);
+                    updateApiStatus('disconnected', 'خطأ في الاتصال');
+                    console.error('Error saving property:', error);
+                }
+            });
+            
+            // Enter key for search
+            document.getElementById('search-query').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchProperties();
+                }
+            });
+            
+            // Filter changes to trigger search
+            ['property-type-filter', 'region-filter', 'sender-filter'].forEach(id => {
+                document.getElementById(id).addEventListener('change', function() {
+                    searchProperties();
+                });
+            });
+            
+            // Limit change
+            document.getElementById('limit-select').addEventListener('change', function() {
+                currentLimit = parseInt(this.value);
+                currentOffset = 0;
+                searchProperties();
+            });
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', function(e) {
+                const propertyModal = document.getElementById('propertyModal');
+                const addEditModal = document.getElementById('addEditModal');
+                
+                if (e.target === propertyModal) {
+                    closePropertyModal();
+                }
+                if (e.target === addEditModal) {
+                    closeAddEditModal();
+                }
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'f') {
+                    e.preventDefault();
+                    document.getElementById('search-query').focus();
+                }
+                if (e.key === 'Escape') {
+                    closePropertyModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
