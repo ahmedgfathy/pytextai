@@ -585,8 +585,16 @@
                         <div class="line-clamp-2 text-xs leading-tight" title="${item.message}">${highlightSearchTerm(item.message)}</div>
                     </td>
                     <td class="px-3 py-2 text-sm text-gray-500">
-                        ${item.sender_phone ? `<div class="phone-number mb-1 ltr-text text-xs">${item.sender_phone}</div>` : ''}
-                        ${item.sender_phone_2 ? `<div class="phone-number ltr-text text-xs">${item.sender_phone_2}</div>` : ''}
+                        ${item.sender_phone ? `<div class="phone-number mb-1 ltr-text text-xs">
+                            <a href="tel:${item.sender_phone}" class="text-blue-600 hover:text-blue-800 hover:underline">
+                                📱 ${item.sender_phone}
+                            </a>
+                        </div>` : ''}
+                        ${item.sender_phone_2 ? `<div class="phone-number ltr-text text-xs">
+                            <a href="tel:${item.sender_phone_2}" class="text-blue-600 hover:text-blue-800 hover:underline">
+                                📞 ${item.sender_phone_2}
+                            </a>
+                        </div>` : ''}
                     </td>
                     <td class="px-3 py-2 text-sm text-gray-900 rtl-text">
                         <div class="truncate text-xs" title="${item.sender_name}">${item.sender_name}</div>
@@ -670,11 +678,47 @@
             const startIndex = (currentPage - 1) * recordsPerPage + 1;
             const endIndex = Math.min(currentPage * recordsPerPage, filteredData.length);
             const total = filteredData.length;
+            const totalPages = Math.ceil(total / recordsPerPage) || 1;
 
-            document.getElementById('showing-from').textContent = startIndex;
+            document.getElementById('showing-from').textContent = total > 0 ? startIndex : 0;
             document.getElementById('showing-to').textContent = endIndex;
             document.getElementById('total-showing').textContent = total;
-            document.getElementById('page-info').textContent = `Page ${currentPage} of ${Math.ceil(total / recordsPerPage)}`;
+            document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages}`;
+            
+            // Update pagination buttons state
+            updatePaginationButtons(totalPages);
+        }
+
+        function updatePaginationButtons(totalPages) {
+            // Get all pagination buttons
+            const nextButtons = document.querySelectorAll('button[onclick="nextPage()"]');
+            const prevButtons = document.querySelectorAll('button[onclick="previousPage()"]');
+            
+            // Update next buttons
+            nextButtons.forEach(btn => {
+                if (currentPage >= totalPages) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.classList.remove('hover:bg-gray-50');
+                } else {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.classList.add('hover:bg-gray-50');
+                }
+            });
+            
+            // Update previous buttons
+            prevButtons.forEach(btn => {
+                if (currentPage <= 1) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.classList.remove('hover:bg-gray-50');
+                } else {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.classList.add('hover:bg-gray-50');
+                }
+            });
         }
 
         // Filtering functions
@@ -704,7 +748,15 @@
                 return matchesSearch && matchesPropertyType && matchesStatus && matchesDate;
             });
 
+            // Reset to page 1 when filtering
             currentPage = 1;
+            
+            // Ensure current page doesn't exceed total pages
+            const totalPages = Math.ceil(filteredData.length / recordsPerPage);
+            if (currentPage > totalPages && totalPages > 0) {
+                currentPage = totalPages;
+            }
+            
             updateStatistics();
             displayData();
         }
@@ -731,6 +783,41 @@
         }
 
         const debouncedSearch = debounce(applyFilters, 300);
+
+        // Utility functions
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                // Show success message
+                const toast = document.createElement('div');
+                toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50';
+                toast.textContent = 'تم نسخ الرقم بنجاح!';
+                document.body.appendChild(toast);
+                
+                // Remove toast after 2 seconds
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 2000);
+            }).catch(function(err) {
+                console.error('فشل في نسخ النص: ', err);
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                // Show success message
+                const toast = document.createElement('div');
+                toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50';
+                toast.textContent = 'تم نسخ الرقم بنجاح!';
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 2000);
+            });
+        }
 
         // Action functions
         function viewDetails(index) {
@@ -762,12 +849,44 @@
                             <p class="mt-1 text-sm text-gray-900">${item.sender_name}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">الهاتف الأساسي:</label>
-                            <p class="mt-1 text-sm text-gray-900 ltr-text">${item.sender_phone || 'غير متوفر'}</p>
+                            <label class="block text-sm font-medium text-gray-700">📱 الهاتف الأساسي:</label>
+                            <div class="mt-1">
+                                ${item.sender_phone ? 
+                                    `<a href="tel:${item.sender_phone}" class="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 underline ltr-text">
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+                                        </svg>
+                                        ${item.sender_phone}
+                                    </a>
+                                    <button onclick="copyToClipboard('${item.sender_phone}')" class="ml-2 text-gray-500 hover:text-gray-700" title="نسخ الرقم">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+                                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+                                        </svg>
+                                    </button>` 
+                                    : '<span class="text-sm text-gray-500">غير متوفر</span>'
+                                }
+                            </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">الهاتف الثانوي:</label>
-                            <p class="mt-1 text-sm text-gray-900 ltr-text">${item.sender_phone_2 || 'غير متوفر'}</p>
+                            <label class="block text-sm font-medium text-gray-700">📞 الهاتف الثانوي:</label>
+                            <div class="mt-1">
+                                ${item.sender_phone_2 ? 
+                                    `<a href="tel:${item.sender_phone_2}" class="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 underline ltr-text">
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+                                        </svg>
+                                        ${item.sender_phone_2}
+                                    </a>
+                                    <button onclick="copyToClipboard('${item.sender_phone_2}')" class="ml-2 text-gray-500 hover:text-gray-700" title="نسخ الرقم">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+                                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+                                        </svg>
+                                    </button>` 
+                                    : '<span class="text-sm text-gray-500">غير متوفر</span>'
+                                }
+                            </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">نوع العقار:</label>
@@ -920,6 +1039,7 @@
             if (currentPage < totalPages) {
                 currentPage++;
                 displayData();
+                updatePaginationInfo();
                 window.scrollTo(0, 0); // Scroll to top when changing pages
             }
         }
@@ -928,6 +1048,7 @@
             if (currentPage > 1) {
                 currentPage--;
                 displayData();
+                updatePaginationInfo();
                 window.scrollTo(0, 0); // Scroll to top when changing pages
             }
         }
@@ -950,6 +1071,15 @@
                 if (e.key === 'Escape') {
                     closeModal();
                     closeEditModal();
+                }
+                // Pagination keyboard shortcuts
+                if (e.key === 'ArrowLeft' && !e.target.matches('input, textarea')) {
+                    e.preventDefault();
+                    nextPage();
+                }
+                if (e.key === 'ArrowRight' && !e.target.matches('input, textarea')) {
+                    e.preventDefault();
+                    previousPage();
                 }
             });
             

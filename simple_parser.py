@@ -487,6 +487,8 @@ def main():
             msg['message'] = re.sub(r'\s+', ' ', msg['message']).strip()
             msg['sender_name'] = re.sub(r'\s+', ' ', msg['sender_name']).strip()
         
+        
+
         # Save to CSV
         headers = ['unique_id', 'file_source', 'date', 'time', 'sender_name', 'sender_phone', 'sender_phone_2', 'message', 'message_backup', 'status', 'region', 'property_type', 'line_number']
         with open('whatsapp_chats.csv', 'w', newline='', encoding='utf-8') as csvfile:

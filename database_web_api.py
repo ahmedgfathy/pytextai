@@ -368,15 +368,64 @@ def get_properties():
         params.append(f"%{sender_filter}%")
     
     if search_query:
-        where_conditions.append("(message LIKE ? OR region LIKE ? OR property_type LIKE ? OR sender_name LIKE ?)")
-        params.extend([f"%{search_query}%"] * 4)
+        # Enhanced smart search logic
+        cleaned_search = search_query.strip().lower()
+        search_words = [word.strip() for word in cleaned_search.split() if word.strip()]
+        
+        search_parts = []
+        for word in search_words:
+            # Create multiple patterns for enhanced fuzzy matching
+            patterns = [
+                f"%{word}%",  # Exact match
+                f"%{word.replace(' ', '')}%",  # No spaces
+            ]
+            
+            # Add number variations
+            if any(c.isdigit() for c in word):
+                number_clean = ''.join(c for c in word if c.isdigit())
+                if number_clean:
+                    patterns.extend([f"%{number_clean}%", f"%0{number_clean}%"])
+            
+            # Enhanced character variations for better typo tolerance
+            if len(word) >= 3:
+                # Missing character variations
+                for i in range(len(word)):
+                    variant = word[:i] + word[i+1:]
+                    if len(variant) >= 2:
+                        patterns.append(f"%{variant}%")
+                
+                # Remove characters from ends
+                patterns.extend([
+                    f"%{word[:-1]}%",  # Missing last char
+                    f"%{word[1:]}%",   # Missing first char
+                ])
+                
+                # Partial matching for longer words
+                if len(word) >= 4:
+                    patterns.extend([
+                        f"{word[:3]}%",    # Starts with first 3 chars
+                        f"%{word[-3:]}",   # Ends with last 3 chars
+                    ])
+            
+            # Create OR condition for this word
+            word_conditions = []
+            for pattern in patterns:
+                word_conditions.append("(message LIKE ? OR region LIKE ? OR property_type LIKE ? OR sender_name LIKE ? OR sender_phone LIKE ? OR sender_phone_2 LIKE ?)")
+                params.extend([pattern] * 6)
+            
+            search_parts.append("(" + " OR ".join(word_conditions) + ")")
+        
+        # All words must match (AND)
+        if search_parts:
+            where_conditions.append("(" + " AND ".join(search_parts) + ")")
+    
     
     where_clause = ""
     if where_conditions:
         where_clause = "WHERE " + " AND ".join(where_conditions)
     
     query = f"""
-    SELECT unique_id, sender_name, region, property_type, message, date, time
+    SELECT unique_id, sender_name, sender_phone, sender_phone_2, region, property_type, message, date, time
     FROM properties 
     {where_clause}
     ORDER BY date DESC, time DESC
@@ -404,29 +453,119 @@ def get_properties():
 
 @app.route('/api/search')
 def search_properties():
-    """Search properties by query."""
+    """Enhanced smart search properties by query with fuzzy matching."""
     query = request.args.get('q', '')
     limit = min(int(request.args.get('limit', 50)), 1000)
     
     if not query:
         return jsonify({'error': 'Query parameter "q" is required'}), 400
     
-    search_query = f"%{query}%"
+    # Clean and prepare search query
+    cleaned_query = query.strip().lower()
     
-    sql = """
-    SELECT unique_id, sender_name, region, property_type, message, date, time
+    # Split query into individual words for better matching
+    search_words = [word.strip() for word in cleaned_query.split() if word.strip()]
+    
+    # Build enhanced search conditions
+    search_conditions = []
+    search_params = []
+    
+    for word in search_words:
+        # Create fuzzy search patterns
+        patterns = [
+            f"%{word}%",  # Exact substring match
+            f"%{word.replace(' ', '')}%",  # Remove spaces
+        ]
+        
+        # Add number variations if word contains digits
+        if any(c.isdigit() for c in word):
+            # Remove spaces from numbers
+            number_clean = ''.join(c for c in word if c.isdigit())
+            if number_clean:
+                patterns.extend([
+                    f"%{number_clean}%",
+                    f"%0{number_clean}%",  # Add leading zero
+                    f"%{number_clean}0%",  # Add trailing zero
+                ])
+        
+        # Add character variations for common typos and fuzzy matching
+        if len(word) >= 3:
+            # Missing character variations
+            for i in range(len(word)):
+                variant = word[:i] + word[i+1:]
+                if len(variant) >= 2:
+                    patterns.append(f"%{variant}%")
+            
+            # Extra character variations (simulate added characters)
+            patterns.extend([
+                f"%{word[:-1]}%",  # Remove last char
+                f"%{word[1:]}%",   # Remove first char
+                f"%{word[:-2]}%",  # Remove last 2 chars (for longer words)
+            ])
+            
+            # Character substitution (common mistakes)
+            if len(word) >= 4:
+                # Try removing middle characters
+                mid = len(word) // 2
+                patterns.extend([
+                    f"%{word[:mid-1] + word[mid:]}%",  # Remove char before middle
+                    f"%{word[:mid] + word[mid+1:]}%",  # Remove char after middle
+                ])
+            
+            # Partial word matching (starts with, ends with)
+            if len(word) >= 4:
+                patterns.extend([
+                    f"{word[:3]}%",    # Starts with first 3 chars
+                    f"%{word[-3:]}",   # Ends with last 3 chars
+                    f"{word[:4]}%",    # Starts with first 4 chars
+                    f"%{word[-4:]}",   # Ends with last 4 chars
+                ])
+        
+        # Create OR condition for this word across all fields
+        word_condition = " OR ".join([
+            "(message LIKE ? OR sender_name LIKE ? OR region LIKE ? OR property_type LIKE ? OR sender_phone LIKE ? OR sender_phone_2 LIKE ?)"
+            for _ in patterns
+        ])
+        
+        search_conditions.append(f"({word_condition})")
+        
+        # Add parameters for each pattern across all fields
+        for pattern in patterns:
+            search_params.extend([pattern] * 6)  # 6 fields per pattern
+    
+    # Combine all word conditions with AND (all words must match somewhere)
+    final_condition = " AND ".join(search_conditions)
+    
+    sql = f"""
+    SELECT unique_id, sender_name, sender_phone, sender_phone_2, region, property_type, message, date, time,
+           CASE 
+               WHEN message LIKE ? THEN 10
+               WHEN sender_name LIKE ? THEN 8
+               WHEN region LIKE ? THEN 6
+               WHEN property_type LIKE ? THEN 5
+               WHEN sender_phone LIKE ? OR sender_phone_2 LIKE ? THEN 7
+               ELSE 1
+           END as relevance_score
     FROM properties 
-    WHERE message LIKE ? OR region LIKE ? OR property_type LIKE ? OR sender_name LIKE ?
-    ORDER BY date DESC, time DESC
+    WHERE {final_condition}
+    ORDER BY relevance_score DESC, date DESC, time DESC
     LIMIT ?
     """
     
-    properties = execute_query(sql, (search_query, search_query, search_query, search_query, limit))
+    # Add relevance scoring parameters
+    exact_query = f"%{cleaned_query}%"
+    relevance_params = [exact_query] * 6  # For relevance scoring
+    
+    # Combine all parameters
+    all_params = relevance_params + search_params + [limit]
+    
+    properties = execute_query(sql, all_params)
     
     return jsonify({
         'data': properties,
         'count': len(properties) if properties and not isinstance(properties, dict) else 0,
-        'query': query
+        'query': query,
+        'search_words': search_words
     })
 
 @app.route('/api/regions')
@@ -455,7 +594,7 @@ def get_properties_by_region(region_name):
     limit = min(int(request.args.get('limit', 50)), 1000)
     
     query = """
-    SELECT unique_id, sender_name, property_type, message, date, time
+    SELECT unique_id, sender_name, sender_phone, sender_phone_2, property_type, message, date, time
     FROM properties 
     WHERE region LIKE ?
     ORDER BY date DESC, time DESC
@@ -511,7 +650,7 @@ def get_property_by_id(unique_id):
     """Get a specific property by its unique ID."""
     try:
         query = """
-        SELECT unique_id, sender_name, region, property_type, message, date, time
+        SELECT unique_id, sender_name, sender_phone, sender_phone_2, region, property_type, message, date, time
         FROM properties 
         WHERE unique_id = ?
         """
