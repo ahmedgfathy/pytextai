@@ -453,7 +453,7 @@ def get_properties():
 
 @app.route('/api/search')
 def search_properties():
-    """Enhanced smart search properties by query with fuzzy matching."""
+    """Enhanced smart search properties by query with precise Arabic number matching."""
     query = request.args.get('q', '')
     limit = min(int(request.args.get('limit', 50)), 1000)
     
@@ -461,7 +461,7 @@ def search_properties():
         return jsonify({'error': 'Query parameter "q" is required'}), 400
     
     # Clean and prepare search query
-    cleaned_query = query.strip().lower()
+    cleaned_query = query.strip()
     
     # Split query into individual words for better matching
     search_words = [word.strip() for word in cleaned_query.split() if word.strip()]
@@ -471,66 +471,103 @@ def search_properties():
     search_params = []
     
     for word in search_words:
-        # Create fuzzy search patterns
-        patterns = [
-            f"%{word}%",  # Exact substring match
-            f"%{word.replace(' ', '')}%",  # Remove spaces
-        ]
+        word_patterns = []
         
-        # Add number variations if word contains digits
-        if any(c.isdigit() for c in word):
-            # Remove spaces from numbers
-            number_clean = ''.join(c for c in word if c.isdigit())
-            if number_clean:
-                patterns.extend([
-                    f"%{number_clean}%",
-                    f"%0{number_clean}%",  # Add leading zero
-                    f"%{number_clean}0%",  # Add trailing zero
-                ])
+        # Check if this word contains Arabic numbers or district/neighborhood terms
+        has_arabic_numbers = any(c in '٠١٢٣٤٥٦٧٨٩' for c in word)
+        has_english_numbers = any(c.isdigit() for c in word)
+        is_district_term = any(term in word.lower() for term in ['الحي', 'حي', 'مجاورة', 'مجاوره', 'مج'])
         
-        # Add character variations for common typos and fuzzy matching
-        if len(word) >= 3:
-            # Missing character variations
-            for i in range(len(word)):
-                variant = word[:i] + word[i+1:]
-                if len(variant) >= 2:
-                    patterns.append(f"%{variant}%")
+        if has_arabic_numbers or (has_english_numbers and is_district_term):
+            # For district/neighborhood searches with numbers, be more precise
+            # 1. Exact match with highest priority
+            word_patterns.append(f"%{word}%")
             
-            # Extra character variations (simulate added characters)
-            patterns.extend([
-                f"%{word[:-1]}%",  # Remove last char
-                f"%{word[1:]}%",   # Remove first char
-                f"%{word[:-2]}%",  # Remove last 2 chars (for longer words)
-            ])
+            # 2. Handle Arabic/English number variations
+            if has_arabic_numbers:
+                # Convert Arabic numbers to English
+                arabic_to_english = {'٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', 
+                                   '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'}
+                english_version = word
+                for ar, en in arabic_to_english.items():
+                    english_version = english_version.replace(ar, en)
+                word_patterns.append(f"%{english_version}%")
             
-            # Character substitution (common mistakes)
+            if has_english_numbers:
+                # Convert English numbers to Arabic
+                english_to_arabic = {'0': '٠', '1': '١', '2': '٢', '3': '٣', '4': '٤', 
+                                   '5': '٥', '6': '٦', '7': '٧', '8': '٨', '9': '٩'}
+                arabic_version = word
+                for en, ar in english_to_arabic.items():
+                    arabic_version = arabic_version.replace(en, ar)
+                word_patterns.append(f"%{arabic_version}%")
+            
+            # 3. Handle spacing variations only for district terms
+            if is_district_term:
+                word_no_space = word.replace(' ', '')
+                word_patterns.append(f"%{word_no_space}%")
+                word_with_space = word.replace('الحي', 'الحي ').replace('حي', 'حي ').replace('مجاورة', 'مجاورة ').replace('مجاوره', 'مجاوره ')
+                word_patterns.append(f"%{word_with_space}%")
+            
+            # 4. Handle abbreviated forms
+            if 'مجاورة' in word or 'مجاوره' in word:
+                # Add "مج" abbreviation
+                abbreviated = word.replace('مجاورة', 'مج').replace('مجاوره', 'مج')
+                word_patterns.append(f"%{abbreviated}%")
+            elif 'مج' in word:
+                # Expand "مج" to full forms
+                full_forms = [word.replace('مج', 'مجاورة'), word.replace('مج', 'مجاوره')]
+                for form in full_forms:
+                    word_patterns.append(f"%{form}%")
+        
+        else:
+            # For non-district terms, use regular fuzzy matching
+            word_lower = word.lower()
+            
+            # 1. Exact match (highest priority)
+            word_patterns.append(f"%{word}%")
+            word_patterns.append(f"%{word_lower}%")
+            
+            # 2. Case variations
+            word_patterns.append(f"%{word.upper()}%")
+            word_patterns.append(f"%{word.title()}%")
+            
+            # 3. Only add fuzzy matching for longer words (4+ characters)
             if len(word) >= 4:
-                # Try removing middle characters
-                mid = len(word) // 2
-                patterns.extend([
-                    f"%{word[:mid-1] + word[mid:]}%",  # Remove char before middle
-                    f"%{word[:mid] + word[mid+1:]}%",  # Remove char after middle
-                ])
+                # Missing character tolerance (only 1 character)
+                for i in range(len(word)):
+                    variant = word[:i] + word[i+1:]
+                    if len(variant) >= 3:
+                        word_patterns.append(f"%{variant}%")
+                
+                # Character substitution for common Arabic typos
+                if any(c in 'أإآءةهى' for c in word):
+                    common_substitutions = {
+                        'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ء': '',
+                        'ة': 'ه', 'ه': 'ة', 'ى': 'ي', 'ي': 'ى'
+                    }
+                    for old_char, new_char in common_substitutions.items():
+                        if old_char in word:
+                            substituted = word.replace(old_char, new_char)
+                            word_patterns.append(f"%{substituted}%")
             
-            # Partial word matching (starts with, ends with)
-            if len(word) >= 4:
-                patterns.extend([
-                    f"{word[:3]}%",    # Starts with first 3 chars
-                    f"%{word[-3:]}",   # Ends with last 3 chars
-                    f"{word[:4]}%",    # Starts with first 4 chars
-                    f"%{word[-4:]}",   # Ends with last 4 chars
-                ])
+            # 4. Handle regular numbers
+            if has_english_numbers:
+                # Search in phone numbers and area sizes
+                number_clean = ''.join(c for c in word if c.isdigit())
+                if number_clean and len(number_clean) >= 2:
+                    word_patterns.append(f"%{number_clean}%")
         
-        # Create OR condition for this word across all fields
+        # Create OR condition for this word across relevant fields
         word_condition = " OR ".join([
             "(message LIKE ? OR sender_name LIKE ? OR region LIKE ? OR property_type LIKE ? OR sender_phone LIKE ? OR sender_phone_2 LIKE ?)"
-            for _ in patterns
+            for _ in word_patterns
         ])
         
         search_conditions.append(f"({word_condition})")
         
         # Add parameters for each pattern across all fields
-        for pattern in patterns:
+        for pattern in word_patterns:
             search_params.extend([pattern] * 6)  # 6 fields per pattern
     
     # Combine all word conditions with AND (all words must match somewhere)
@@ -539,10 +576,9 @@ def search_properties():
     sql = f"""
     SELECT unique_id, sender_name, sender_phone, sender_phone_2, region, property_type, message, date, time,
            CASE 
-               WHEN message LIKE ? THEN 10
+               WHEN message LIKE ? OR region LIKE ? THEN 10
                WHEN sender_name LIKE ? THEN 8
-               WHEN region LIKE ? THEN 6
-               WHEN property_type LIKE ? THEN 5
+               WHEN property_type LIKE ? THEN 6
                WHEN sender_phone LIKE ? OR sender_phone_2 LIKE ? THEN 7
                ELSE 1
            END as relevance_score
@@ -552,9 +588,9 @@ def search_properties():
     LIMIT ?
     """
     
-    # Add relevance scoring parameters
+    # Add relevance scoring parameters (prioritize exact matches)
     exact_query = f"%{cleaned_query}%"
-    relevance_params = [exact_query] * 6  # For relevance scoring
+    relevance_params = [exact_query, exact_query, exact_query, exact_query, exact_query, exact_query]
     
     # Combine all parameters
     all_params = relevance_params + search_params + [limit]
